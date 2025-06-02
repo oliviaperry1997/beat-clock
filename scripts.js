@@ -22,7 +22,8 @@ function getSpringEquinox(holoceneYear) {
 }
 
 function getDaysSinceEquinox(now, equinox) {
-    const diff = now - equinox;
+    const adjustedNow = new Date(now.getTime() - 3600000); // shift back 1 hour
+    const diff = adjustedNow - equinox;
     return Math.floor(diff / 86400000) + 1;
 }
 
@@ -91,6 +92,15 @@ function getNextSunrise(now, lat, lon) {
     return new Date(now.getTime() + 86400000); // fallback
 }
 
+function getPreviousSunset(now, lat, lon) {
+    for (let i = 1; i <= 3; i++) {
+        const past = new Date(now.getTime() - i * 86400000);
+        const times = SunCalc.getTimes(past, lat, lon);
+        if (times.sunset) return times.sunset;
+    }
+    return new Date(now.getTime() - 86400000); // fallback
+}
+
 function getSolarPercent(now, lat, lon) {
     if (lat == null || lon == null) return 'S??';
     const times = SunCalc.getTimes(now, lat, lon);
@@ -99,9 +109,19 @@ function getSolarPercent(now, lat, lon) {
 
     if (!sunrise || !sunset || isNaN(sunrise.getTime()) || isNaN(sunset.getTime())) return 'S??';
 
-    const isDay = now >= sunrise && now < sunset;
-    const start = isDay ? sunrise : sunset;
-    const end = isDay ? sunset : getNextSunrise(now, lat, lon);
+    let isDay = now >= sunrise && now < sunset;
+    let start, end;
+
+    if (isDay) {
+        start = sunrise;
+        end = sunset;
+    } else if (now < sunrise) {
+        start = getPreviousSunset(now, lat, lon);
+        end = sunrise;
+    } else {
+        start = sunset;
+        end = getNextSunrise(now, lat, lon);
+    }
 
     const percent = ((now - start) / (end - start)) * 100;
     return `${isDay ? 'S' : 'N'}${Math.floor(percent).toString().padStart(2, '0')}`;
