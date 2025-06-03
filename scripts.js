@@ -7,23 +7,31 @@ function getHoloceneYear(date) {
 }
 
 const equinoxTimestampsUTC = {
-  2025: Date.UTC(2025, 2, 20, 3, 6, 0),  // March 20, 2025, 03:06 UTC
-  2026: Date.UTC(2026, 2, 20, 9, 30, 0), // hypothetical example
-  // add more if needed
+  2025: Date.UTC(2025, 2, 20, 3, 6, 0),
+  2026: Date.UTC(2026, 2, 20, 9, 30, 0),
+  // add more as needed
 };
 
 function getSpringEquinox(holoceneYear) {
   const gregorianYear = holoceneYear - 9700;
+  let equinoxUTC;
+
   if (equinoxTimestampsUTC[gregorianYear]) {
-    return new Date(equinoxTimestampsUTC[gregorianYear]);
+    equinoxUTC = new Date(equinoxTimestampsUTC[gregorianYear]);
+  } else {
+    // fallback: approximate March 20 at 12:00 UTC
+    equinoxUTC = new Date(Date.UTC(gregorianYear, 2, 20, 12, 0, 0));
   }
-  // fallback: approximate March 20 at noon UTC if unknown
-  return new Date(Date.UTC(gregorianYear, 2, 20, 12, 0, 0));
+
+  // Shift equinox to the previous 23:00 UTC for day counting anchor
+  const anchorTime = new Date(equinoxUTC.getTime());
+  anchorTime.setUTCHours(23, 0, 0, 0); // normalize to exact 23:00:00 UTC
+  anchorTime.setUTCDate(anchorTime.getUTCDate() - 1); // ensure it's *previous* day
+  return anchorTime;
 }
 
 function getDaysSinceEquinox(now, equinox) {
-    const adjustedNow = new Date(now.getTime() - 3600000); // shift back 1 hour
-    const diff = adjustedNow - equinox;
+    const diff = now - equinox;
     return Math.floor(diff / 86400000) + 1;
 }
 
@@ -140,6 +148,25 @@ function updateClock(userLocation) {
 
     const clockText = `H${holoceneYear} L${moon.lunation}.${moon.percent} D${daysSinceEquinox} ${beats} ${solar}`;
     document.querySelector("#beats-container").textContent = clockText;
+}
+
+function convertGregorianToCustom(gregorianString, lat = null, lon = null) {
+    const now = new Date(gregorianString);
+    if (isNaN(now)) {
+        console.error("Invalid date input.");
+        return null;
+    }
+
+    const holoceneYear = getHoloceneYear(now);
+    const equinox = getSpringEquinox(holoceneYear);
+    const daysSinceEquinox = getDaysSinceEquinox(now, equinox);
+    const moon = getLunationSinceEquinox(now, equinox);
+    const beats = getBeats(now);
+    const solar = getSolarPercent(now, lat, lon);
+
+    const clockText = `H${holoceneYear} L${moon.lunation}.${moon.percent} D${daysSinceEquinox} ${beats} ${solar}`;
+    console.log(clockText);
+    return clockText;
 }
 
 // --- Run with Geolocation ---
