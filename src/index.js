@@ -1,32 +1,35 @@
-import SunCalc from "https://esm.sh/suncalc@1.9.0";
-
+import "./styles.css";
+import SunCalc from "suncalc";
+import { solar, julian } from "astronomia";
 // --- Helpers ---
 
 function getHoloceneYear(date) {
     return date.getUTCFullYear() + 9700;
 }
 
-const equinoxTimestampsUTC = {
-  2025: Date.UTC(2025, 2, 20, 3, 6, 0),
-  2026: Date.UTC(2026, 2, 20, 9, 30, 0),
-  // add more as needed
-};
+function marchEquinoxJDE(year) {
+  const Y = (year - 2000) / 1000;
+
+  return (
+    2451623.80984 +
+    365242.37404 * Y +
+    0.05169 * Y ** 2 -
+    0.00411 * Y ** 3 -
+    0.00057 * Y ** 4
+  );
+}
 
 function getSpringEquinox(holoceneYear) {
   const gregorianYear = holoceneYear - 9700;
-  let equinoxUTC;
-
-  if (equinoxTimestampsUTC[gregorianYear]) {
-    equinoxUTC = new Date(equinoxTimestampsUTC[gregorianYear]);
-  } else {
-    // fallback: approximate March 20 at 12:00 UTC
-    equinoxUTC = new Date(Date.UTC(gregorianYear, 2, 20, 12, 0, 0));
-  }
+  const jde = marchEquinoxJDE(gregorianYear);
+  const equinoxDateUTC = julian.JDEToDate(jde);
 
   // Shift equinox to the previous 23:00 UTC for day counting anchor
-  const anchorTime = new Date(equinoxUTC.getTime());
-  anchorTime.setUTCHours(23, 0, 0, 0); // normalize to exact 23:00:00 UTC
-  anchorTime.setUTCDate(anchorTime.getUTCDate() - 1); // ensure it's *previous* day
+  const anchorTime = new Date(equinoxDateUTC.getTime());
+  anchorTime.setUTCHours(23, 0, 0, 0);
+  if (equinoxDateUTC.getUTCHours() < 23) {
+    anchorTime.setUTCDate(anchorTime.getUTCDate() - 1);
+  }
   return anchorTime;
 }
 
