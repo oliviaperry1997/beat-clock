@@ -8,6 +8,7 @@ body {
     background-size: 100% 100%;
     transition: background 1.5s ease-out;
     overflow-x: hidden;
+    color: rgba(255, 255, 255, 0.9);
 }
 
 @keyframes breathe {
@@ -199,6 +200,7 @@ body {
   max-width: 500px;
   max-height: 80vh;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   background: rgba(0, 0, 0, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
@@ -255,6 +257,7 @@ body {
   margin-top: 0.5rem;
   max-height: 200px;
   overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .search-result {
