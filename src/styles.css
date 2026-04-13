@@ -3,14 +3,51 @@
     margin: 0;
 }
 
+body {
+    min-height: 100vh;
+    background-size: 100% 100%;
+    transition: background 1.5s ease-out;
+    overflow-x: hidden;
+}
+
+@keyframes breathe {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.005);
+    }
+}
+
+#moon-indicator {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    width: 20px;
+    height: 20px;
+    opacity: 0.4;
+    transition: opacity 150ms ease-out;
+}
+
+#moon-indicator:hover {
+    opacity: 0.8;
+}
+
 #beats-container {
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 5rem;
-    font-weight: 900;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
     justify-content: center;
     display: flex;
     height: 100vh;
     align-items: center;
+    animation: breathe 4s ease-in-out infinite;
+    will-change: transform;
 }
 
 /* Location UI styles */
@@ -427,9 +464,22 @@
     width: 95%;
     max-height: 90vh;
   }
-  
+
   .location-selector {
     top: 0.5rem;
     right: 0.5rem;
+  }
+
+  #beats-container {
+    font-size: clamp(2rem, 8vw, 3.5rem);
+    padding: 0 1rem;
+    letter-spacing: 0.04em;
+  }
+
+  #moon-indicator {
+    width: 16px;
+    height: 16px;
+    top: 0.75rem;
+    left: 0.75rem;
   }
 }
