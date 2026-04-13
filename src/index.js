@@ -3,6 +3,8 @@ import { compose } from "./chronometers/index.js";
 import { initLocationSystem } from "./location/ui.js";
 import { initConverterPanel } from "./converters/ui.js";
 import { getSkyGradientColors } from "./sky.js";
+import { initAlarmEngine, handleMissedAlarms } from "./alarms/engine.js";
+import { invalidateCache } from "./alarms/astro-cache.js";
 import "./converters/styles.css";
 
 function updateMoonIndicator(lunisolar) {
@@ -64,10 +66,25 @@ updateClock(null);
 
 // Initialize location system (handles first-run, active location, etc.)
 let updateInterval = null;
+let alarmEngine = null;
 initLocationSystem((location) => {
   updateClock(location);
   if (updateInterval) clearInterval(updateInterval);
   updateInterval = setInterval(() => updateClock(location), 864);
+
+  // Reinitialize alarm engine with new location
+  if (alarmEngine) alarmEngine.stop();
+  alarmEngine = initAlarmEngine(location);
+
+  // Invalidate astronomical cache on location change
+  invalidateCache();
+});
+
+// Handle missed alarms when tab becomes visible again
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    handleMissedAlarms();
+  }
 });
 
 initConverterPanel();
