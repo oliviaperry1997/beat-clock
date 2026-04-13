@@ -1,0 +1,169 @@
+/* Converter Panel */
+.converter-panel {
+  max-width: 600px;
+  margin: 1rem auto;
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  backdrop-filter: blur(20px);
+}
+
+.converter-panel h2 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+/* Tabs */
+.converter-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.converter-tab {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 150ms ease-out;
+}
+
+.converter-tab:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.converter-tab.active {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Panel Content */
+.converter-panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.converter-panel-content.hidden {
+  display: none;
+}
+
+/* Inputs */
+#converter-datetime-input,
+#reverse-beats-input,
+#reverse-holocene-input,
+#reverse-lunar-month-input,
+#reverse-lunar-day-input,
+#cross-timezone-datetime-input {
+  width: 100%;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+#converter-datetime-input:focus,
+#reverse-beats-input:focus,
+#reverse-holocene-input:focus,
+#reverse-lunar-month-input:focus,
+#reverse-lunar-day-input:focus,
+#cross-timezone-datetime-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Convert Button */
+#reverse-convert-btn,
+#cross-timezone-compare-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 150ms ease-out;
+}
+
+#reverse-convert-btn:hover,
+#cross-timezone-compare-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Results */
+#converter-result,
+#reverse-result,
+#cross-timezone-locations {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  min-height: 2rem;
+}
+
+#converter-result:empty,
+#reverse-result:empty {
+  padding: 0;
+  min-height: 0;
+}
+
+/* Disclaimer */
+#reverse-disclaimer {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+  font-style: italic;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+}
+
+#reverse-disclaimer:empty {
+  display: none;
+}
+
+/* Cross-Timezone Results */
+.cross-timezone-note {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 0.75rem;
+  font-style: italic;
+}
+
+.timezone-result {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.timezone-result:last-child {
+  border-bottom: none;
+}
+
+.timezone-result h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.timezone-result .result-value {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.no-locations-msg {
+  text-align: center;
+  opacity: 0.7;
+  font-size: 0.9rem;
+  padding: 1rem;
+}

@@ -1,6 +1,8 @@
 import "./styles.css";
 import { compose } from "./chronometers/index.js";
 import { initLocationSystem } from "./location/ui.js";
+import { initConverterPanel } from "./converters/ui.js";
+import "./converters/styles.css";
 
 function updateClock(userLocation) {
   const now = new Date();
@@ -29,3 +31,5 @@ initLocationSystem((location) => {
   if (updateInterval) clearInterval(updateInterval);
   updateInterval = setInterval(() => updateClock(location), 864);
 });
+
+initConverterPanel();
