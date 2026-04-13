@@ -1,26 +1,4 @@
-* {
-    box-sizing: border-box;
-    margin: 0;
-}
-
-#beats-container {
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 5rem;
-    font-weight: 900;
-    justify-content: center;
-    display: flex;
-    height: 100vh;
-    align-items: center;
-}
-
-/* Location UI styles */
-.location-selector {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    z-index: 100;
-    font-family: inherit;
-}/**
+/**
  * Location UI styles — dropdown, modal, search results, saved locations.
  */
 
