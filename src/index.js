@@ -1,5 +1,6 @@
 import "./styles.css";
 import { compose } from "./chronometers/index.js";
+import { initLocationSystem } from "./location/ui.js";
 
 function updateClock(userLocation) {
   const now = new Date();
@@ -21,25 +22,10 @@ function updateClock(userLocation) {
 // Immediate render on page load (D-09)
 updateClock(null);
 
-// Then bootstrap geolocation
-if (navigator.geolocation) {
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      const userLocation = {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-      };
-      updateClock(userLocation);
-      setInterval(() => updateClock(userLocation), 864);
-    },
-    (error) => {
-      console.warn("Geolocation failed:", error.message);
-      updateClock(null);
-      setInterval(() => updateClock(null), 864);
-    }
-  );
-} else {
-  console.warn("Geolocation not supported.");
-  updateClock(null);
-  setInterval(() => updateClock(null), 864);
-}
+// Initialize location system (handles first-run, active location, etc.)
+let updateInterval = null;
+initLocationSystem((location) => {
+  updateClock(location);
+  if (updateInterval) clearInterval(updateInterval);
+  updateInterval = setInterval(() => updateClock(location), 864);
+});
