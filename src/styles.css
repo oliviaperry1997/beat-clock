@@ -458,6 +458,66 @@ body {
   opacity: 1;
 }
 
+/* Alarm Overlay */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.alarm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+  animation: fadeIn 250ms ease-out;
+}
+
+.alarm-overlay-content {
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20px);
+  padding: 2rem;
+  text-align: center;
+  min-width: 280px;
+  max-width: 400px;
+}
+
+.alarm-overlay-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.alarm-overlay-dismiss {
+  padding: 0.75rem 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 150ms ease-out, opacity 150ms ease-out;
+}
+
+.alarm-overlay-dismiss:hover {
+  background: rgba(255, 255, 255, 0.2);
+  opacity: 1;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .modal-content {
@@ -481,5 +541,16 @@ body {
     height: 16px;
     top: 0.75rem;
     left: 0.75rem;
+  }
+
+  .alarm-overlay-content {
+    width: 90%;
+    min-width: auto;
+    padding: 1.5rem;
+  }
+
+  .alarm-overlay-title {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
   }
 }
