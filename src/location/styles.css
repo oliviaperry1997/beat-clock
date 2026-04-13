@@ -1,0 +1,413 @@
+/**
+ * Location UI styles — dropdown, modal, search results, saved locations.
+ */
+
+/* Location Selector */
+.location-selector {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 100;
+  font-family: inherit;
+}
+
+.location-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: background 150ms ease-out;
+}
+
+.location-toggle:hover {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.dropdown-arrow {
+  font-size: 0.6rem;
+  opacity: 0.7;
+}
+
+/* Dropdown */
+.location-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  min-width: 250px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+  transition: opacity 150ms ease-out, transform 150ms ease-out;
+}
+
+.location-dropdown.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-10px);
+}
+
+.saved-location {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: background 150ms ease-out;
+}
+
+.saved-location:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.saved-location.active {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.location-name {
+  font-size: 0.9rem;
+}
+
+.active-indicator {
+  color: #4ade80;
+  font-size: 1rem;
+}
+
+.manage-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: transparent;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  color: inherit;
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 150ms ease-out, background 150ms ease-out;
+}
+
+.manage-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  opacity: 1;
+}
+
+/* Location Status */
+.location-status {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  font-size: 0.8rem;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+}
+
+.location-status--error {
+  opacity: 1;
+  color: #f87171;
+}
+
+/* Modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  transition: opacity 250ms ease-out;
+}
+
+.modal.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.modal-content {
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20px);
+  padding: 1.5rem;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.modal-header h2 {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+#close-manager {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 1.5rem;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 150ms ease-out;
+}
+
+#close-manager:hover {
+  opacity: 1;
+}
+
+/* Search Panel */
+#city-search {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  font-size: 1rem;
+}
+
+#city-search:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+#search-results {
+  margin-top: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.search-result {
+  padding: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: background 200ms ease-out;
+}
+
+.search-result:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.result-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.result-meta {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  margin-top: 0.25rem;
+}
+
+.no-results, .error {
+  padding: 0.75rem;
+  text-align: center;
+  opacity: 0.7;
+  font-size: 0.9rem;
+}
+
+.error {
+  color: #f87171;
+}
+
+/* Manual Input Panel */
+.manual-input-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+#manual-lat, #manual-lon {
+  flex: 1;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+}
+
+#manual-lat:focus, #manual-lon:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+#manual-lat.valid, #manual-lon.valid {
+  border-color: #4ade80;
+}
+
+#manual-lat.invalid, #manual-lon.invalid {
+  border-color: #f87171;
+}
+
+#manual-name {
+  width: 100%;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  margin-bottom: 0.5rem;
+}
+
+#manual-name:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+#add-manual-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 150ms ease-out, opacity 150ms ease-out;
+}
+
+#add-manual-btn:enabled:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+#add-manual-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Geolocation Panel */
+#geolocation-panel {
+  margin: 1rem 0;
+  text-align: center;
+}
+
+#detect-location-btn {
+  padding: 0.75rem 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background 150ms ease-out;
+}
+
+#detect-location-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.geolocation-status {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+}
+
+.geolocation-status.loading,
+.geolocation-status.success,
+.geolocation-status.error {
+  opacity: 1;
+}
+
+.geolocation-status.success {
+  color: #4ade80;
+}
+
+.geolocation-status.error {
+  color: #f87171;
+}
+
+/* Saved List */
+#saved-list {
+  margin-top: 1rem;
+}
+
+#saved-list h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+#saved-list-items {
+  list-style: none;
+  padding: 0;
+}
+
+.saved-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.saved-list-item.active {
+  opacity: 1;
+}
+
+.location-switch-btn {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: background 150ms ease-out;
+}
+
+.location-switch-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.location-remove-btn {
+  background: transparent;
+  border: none;
+  color: #f87171;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  opacity: 0.7;
+  transition: opacity 150ms ease-out;
+}
+
+.location-remove-btn:hover {
+  opacity: 1;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .modal-content {
+    width: 95%;
+    max-height: 90vh;
+  }
+  
+  .location-selector {
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+}
