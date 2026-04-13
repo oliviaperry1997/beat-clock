@@ -8,8 +8,8 @@
 
 | Phase | Name | Status | Plans | Progress |
 |-------|------|--------|-------|----------|
-| 1 | Codebase Audit & Architecture Design | ○ | — | 0% |
-| 2 | Modular Chronometry Core | ○ | — | 0% |
+| 1 | Codebase Audit & Architecture Design | ✅ | ARCHITECTURE.md | 100% |
+| 2 | Modular Chronometry Core | ◐ | 02-PLAN.md | 50% |
 | 3 | Location System | ○ | — | 0% |
 | 4 | Datetime Converters | ○ | — | 0% |
 | 5 | Atmospheric Visual Design | ○ | — | 0% |
