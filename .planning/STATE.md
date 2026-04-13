@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 02
-status: Executing Phase 02
-last_updated: "2026-04-13T12:40:52.355Z"
+current_phase: Phase 3 planned — ready for execution
+status: completed
+last_updated: "2026-04-13T15:00:00.000Z"
 progress:
   total_phases: 8
-  completed_phases: 0
+  completed_phases: 2
   total_plans: 2
-  completed_plans: 0
-  percent: 0
+  completed_plans: 2
+  percent: 25
 ---
 
 # STATE.md — Beat Clock
@@ -20,23 +20,25 @@ progress:
 See: .planning/PROJECT.md (updated 2025-04-13)
 
 **Core value:** Make the invisible rhythms of time — lunar cycles, solar arcs, alternative calendars — tangible and beautiful in everyday use.
-**Current focus:** Phase 02 — Modular Chronometry Core
+**Current focus:** Phase 2 complete — ready for Phase 3 (Location System)
 
 ## Project State
 
 **Milestone:** v0 (Refactor + Enhance)
-**Current Phase:** 02
-**Last Action:** Phase 2 (Modular Chronometry Core) — 02-PLAN.md produced (10 tasks, 1 wave)
+**Current Phase:** Phase 2 complete
+**Last Action:** Phase 2 (Modular Chronometry Core) — 10 tasks executed, 27 tests passing
 **Date:** 2026-04-13
 
 ## Brownfield Context
 
 Existing codebase analyzed:
 
-- `src/index.js` — Clock logic (Holocene, lunar, beats, solar)
+- `src/chronometers/` — 7 module files (holocene, beats, solar, lunisolar, oldSystem, composer, chineseNewYear)
+- `src/index.js` — Reduced to DOM update + geolocation bootstrap only (33 lines)
 - `src/styles.css` — Minimal centered text styling
 - `src/template.html` — HTML shell
 - Webpack 5 build pipeline functional
+- Vitest test suite: 27 tests across 6 files
 
 ## Active Decisions
 
@@ -52,18 +54,23 @@ Existing codebase analyzed:
 
 ```
 Phase 1: ████████████████████ 100% — Codebase Audit & Architecture Design (ARCHITECTURE.md produced)
-Phase 2: ████████████████████ 100% — Modular Chronometry Core (PLAN.md produced, ready for execution)
+Phase 2: ████████████████████ 100% — Modular Chronometry Core (COMPLETE — 10 tasks, 27 tests)
 
-Progress: ████░░░░░░░░░ 25%
+Progress: ████████░░░░░░░░ 25%
 ```
 
 ## Recent Activity
 
-- **2026-04-13**: Phase 2 planned — Modular Chronometry Core
-  - 02-RESEARCH.md produced — lunar-javascript API, Vitest+Webpack setup, astronomia APIs, test fixtures
-  - 02-PLAN.md produced (299 lines, 10 tasks in 1 wave)
-  - Plan: Extract 5 chronometer modules (holocene, beats, solar, lunisolar, oldSystem), create composer, refactor entry point, write unit + integration tests
-  - Dependencies: lunar-javascript already installed, vitest+jsdom to be installed during execution
+- **2026-04-13**: Phase 2 complete — Modular Chronometry Core
+  - 10 tasks executed sequentially
+  - 7 new chronometer modules created
+  - src/index.js reduced from 185 lines to 33 lines
+  - 27 tests passing (21 unit + 6 integration)
+  - Display format: H{year} M{month} D{day} @{beats} {solar}
+  - Holocene year ticks on Chinese New Year (D-03)
+  - Leap months display as MX format (D-04)
+  - Composer wraps each module in try/catch (D-26)
+  - Immediate render on page load (D-09)
 - **2026-04-13**: Phase 1 complete — Codebase Audit & Architecture Design
   - ARCHITECTURE.md produced (329 lines)
   - 12-function analysis, 8-issue inventory, modular architecture design
@@ -75,4 +82,4 @@ Progress: ████░░░░░░░░░ 25%
   - Config set to YOLO/Standard/Parallel/Research
 
 ---
-*Last updated: 2025-04-13 after initialization*
+*Last updated: 2026-04-13 after Phase 2 completion*
