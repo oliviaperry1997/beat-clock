@@ -37,6 +37,12 @@ describe('composer integration', () => {
   it('returns lunisolar with month, day, isLeap', () => {
     const date = new Date(Date.UTC(2026, 1, 17)); // CNY 2026
     const result = compose(date, {});
-    expect(result.lunisolar).toEqual({ month: 1, day: 1, isLeap: false });
+    expect(result.lunisolar).toHaveProperty('month', 1);
+    expect(result.lunisolar).toHaveProperty('day', 1);
+    expect(result.lunisolar).toHaveProperty('isLeap', false);
+    expect(result.lunisolar.moonAge).toBeGreaterThanOrEqual(0);
+    expect(result.lunisolar.moonAge).toBeLessThanOrEqual(29.53);
+    expect(result.lunisolar.illumination).toBeGreaterThanOrEqual(0);
+    expect(result.lunisolar.illumination).toBeLessThanOrEqual(1);
   });
 });

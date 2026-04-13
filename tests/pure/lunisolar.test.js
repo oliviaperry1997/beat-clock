@@ -6,15 +6,25 @@ describe('lunisolar chronometer', () => {
   it('returns correct values for CNY 2026 (Feb 17, 2026)', () => {
     const date = new Date(Date.UTC(2026, 1, 17));
     const result = compute(date);
-    expect(result).toEqual({ month: 1, day: 1, isLeap: false });
+    expect(result).toHaveProperty('month', 1);
+    expect(result).toHaveProperty('day', 1);
+    expect(result).toHaveProperty('isLeap', false);
+    expect(result.moonAge).toBeGreaterThanOrEqual(0);
+    expect(result.moonAge).toBeLessThanOrEqual(29.53);
+    expect(result.illumination).toBeGreaterThanOrEqual(0);
+    expect(result.illumination).toBeLessThanOrEqual(1);
   });
 
   it('detects leap month for Jul 25, 2025 (leap 6th month day 1)', () => {
     const date = new Date(Date.UTC(2025, 6, 25));
     const result = compute(date);
-    expect(result.month).toBe(6);
-    expect(result.day).toBe(1);
-    expect(result.isLeap).toBe(true);
+    expect(result).toHaveProperty('month', 6);
+    expect(result).toHaveProperty('day', 1);
+    expect(result).toHaveProperty('isLeap', true);
+    expect(result.moonAge).toBeGreaterThanOrEqual(0);
+    expect(result.moonAge).toBeLessThanOrEqual(29.53);
+    expect(result.illumination).toBeGreaterThanOrEqual(0);
+    expect(result.illumination).toBeLessThanOrEqual(1);
   });
 
   it('returns valid values for spring equinox 2026', () => {
