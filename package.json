@@ -2,8 +2,11 @@
   "scripts": {
     "start": "webpack serve --mode development",
     "build": "webpack --mode production",
+    "deploy": "npm run build && git add docs/ && git status --short docs/",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "precommit:build": "npm run build && git add docs/",
+    "prepare": "node -e \"require('fs').chmodSync('.git/hooks/pre-commit','755')\" 2>/dev/null || true"
   },
   "dependencies": {
     "astronomia": "^4.1.1",
