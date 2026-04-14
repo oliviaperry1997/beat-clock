@@ -558,6 +558,20 @@ body {
   flex: 1;
 }
 
+.alarm-edit-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  transition: color 150ms ease-out;
+}
+
+.alarm-edit-btn:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+
 .no-alarms {
   padding: 1rem 0;
   text-align: center;

@@ -60,13 +60,13 @@ describe('shouldFireAlarm', () => {
     expect(shouldFireAlarm(alarm, now)).toBe(true);
   });
 
-  it('returns true when last fired > 1728ms ago', () => {
-    const alarm = { lastFiredAt: new Date(now.getTime() - 2000).toISOString() };
+  it('returns true when last fired > 86400ms ago (one beat)', () => {
+    const alarm = { lastFiredAt: new Date(now.getTime() - 87000).toISOString() };
     expect(shouldFireAlarm(alarm, now)).toBe(true);
   });
 
-  it('returns false when last fired < 1728ms ago', () => {
-    const alarm = { lastFiredAt: new Date(now.getTime() - 1000).toISOString() };
+  it('returns false when last fired < 86400ms ago', () => {
+    const alarm = { lastFiredAt: new Date(now.getTime() - 50000).toISOString() };
     expect(shouldFireAlarm(alarm, now)).toBe(false);
   });
 });

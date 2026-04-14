@@ -15,12 +15,8 @@ import {
 
 import { compute as computeBeats } from '../chronometers/beats.js';
 
-const ONE_BEAT_MS = 86400000 / 1000; // 86400ms per beat
-const TWO_BEATS_MS = ONE_BEAT_MS * 2; // ~172.8ms * 2 = ~1728ms... wait, 1 beat = 86.4s = 86400ms
-// Actually: 1 beat = 86.4 seconds = 86400ms, 2 beats = 172800ms
-// But the spec says 1728ms — that's likely a typo. Let me use 864ms tolerance as specified.
-const DEDUP_THRESHOLD = 1728; // 2 beats in ms per spec
-const TIME_TOLERANCE = 864; // 1 beat tolerance in ms per spec
+const ONE_BEAT_MS = 86400; // 86.4 seconds per beat
+const TIME_TOLERANCE = 432; // 0.5 beat tolerance in ms (half of one beat)
 
 /**
  * Evaluate whether an alarm should fire.
@@ -72,9 +68,8 @@ export function evaluateCondition(condition, now, events) {
   switch (condition.type) {
     case 'beat-time': {
       const beatStr = computeBeats(now);
-      // Extract numeric beat from format like "@500.00"
       const currentBeat = parseFloat(beatStr.replace('@', ''));
-      return Math.abs(currentBeat - condition.params.beat) < 1;
+      return Math.abs(currentBeat - condition.params.beat) <= 0.5;
     }
 
     case 'standard-time': {
@@ -97,18 +92,15 @@ export function evaluateCondition(condition, now, events) {
       if (!eventTime || isNaN(eventTime.getTime())) {
         return false;
       }
-      // Compute beats at event time, add offset, convert back to time
       const eventBeatStr = computeBeats(eventTime);
       const eventBeat = parseFloat(eventBeatStr.replace('@', ''));
       const targetBeat = eventBeat + condition.params.offsetBeats;
-      // Approximate: each beat is ~86.4 seconds
       const beatDiff = targetBeat - eventBeat;
       const targetTime = new Date(eventTime.getTime() + beatDiff * 86.4 * 1000);
       return Math.abs(now.getTime() - targetTime.getTime()) < TIME_TOLERANCE;
     }
 
     case 'date-trigger': {
-      // The dateFilter does the actual work
       return true;
     }
 
@@ -165,7 +157,6 @@ export function evaluateRecurrence(alarm, now) {
       return true;
 
     case 'weekly': {
-      // Check weekday filter if present
       if (alarm.condition && alarm.condition.dateFilter && alarm.condition.dateFilter.type === 'weekdays') {
         return alarm.condition.dateFilter.params.days.includes(now.getDay());
       }
@@ -176,11 +167,10 @@ export function evaluateRecurrence(alarm, now) {
       return true;
 
     case 'lunar': {
-      // Check lunar phase filter if present
       if (alarm.condition && alarm.condition.dateFilter && alarm.condition.dateFilter.type === 'lunar-phase') {
         const phase = alarm.condition.dateFilter.params.phase;
         if (phase === 'full-moon') {
-          return isFullMoonDay(0.99); // Would need events, but this is recurrence-level check
+          return isFullMoonDay(0.99);
         }
         if (phase === 'new-moon') {
           return isNewMoonDay(0.01);
@@ -196,7 +186,8 @@ export function evaluateRecurrence(alarm, now) {
 
 /**
  * Check if alarm should fire now (deduplication).
- * Prevents re-firing within 2 beats window.
+ * After firing, blocks re-firing for one full beat cycle (~86.4s)
+ * to prevent repetitive triggering.
  */
 export function shouldFireAlarm(alarm, now) {
   if (!alarm.lastFiredAt) {
@@ -206,5 +197,6 @@ export function shouldFireAlarm(alarm, now) {
   const lastFiredTime = new Date(alarm.lastFiredAt).getTime();
   const timeSinceLastFire = now.getTime() - lastFiredTime;
 
-  return timeSinceLastFire > DEDUP_THRESHOLD;
+  // Block for one full beat cycle to prevent repetitive ringing
+  return timeSinceLastFire > ONE_BEAT_MS;
 }

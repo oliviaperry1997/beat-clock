@@ -16,6 +16,37 @@ let currentTemplateKey = null;
 let formData = {};
 
 /**
+ * Generate a human-readable label for an alarm.
+ */
+function getAlarmDescription(alarm) {
+  if (!alarm.condition) return alarm.label || 'Alarm';
+
+  const c = alarm.condition;
+  switch (c.type) {
+    case 'beat-time':
+      return `At ${c.params.beat} beats`;
+    case 'standard-time':
+      return `At ${String(c.params.hours).padStart(2, '0')}:${String(c.params.minutes).padStart(2, '0')}`;
+    case 'astro-offset': {
+      const eventLabels = { sunrise: 'sunrise', sunset: 'sunset', solarNoon: 'solar noon' };
+      const eventName = eventLabels[c.params.event] || c.params.event;
+      const offset = c.params.offsetMinutes;
+      const dir = offset >= 0 ? 'after' : 'before';
+      return `${Math.abs(offset)} min ${dir} ${eventName}`;
+    }
+    case 'astro-offset-beats': {
+      const eventLabels = { sunrise: 'sunrise', sunset: 'sunset', solarNoon: 'solar noon' };
+      const eventName = eventLabels[c.params.event] || c.params.event;
+      return `${c.params.offsetBeats} beats after ${eventName}`;
+    }
+    case 'date-trigger':
+      return c.template || alarm.label;
+    default:
+      return alarm.label || 'Alarm';
+  }
+}
+
+/**
  * Initialize the full alarm system UI.
  *
  * @param {Object} location - Location object with latitude/longitude
@@ -156,8 +187,9 @@ function renderAlarmList() {
 
   container.innerHTML = alarms.map(alarm => `
     <div class="alarm-list-item" data-id="${alarm.id}">
-      <span class="alarm-label">${alarm.label}</span>
+      <span class="alarm-label">${getAlarmDescription(alarm)}</span>
       <div class="alarm-toggle-switch ${alarm.enabled ? 'active' : ''}" data-toggle="${alarm.id}" aria-label="Toggle ${alarm.label}" role="switch"></div>
+      <button class="alarm-edit-btn" data-edit="${alarm.id}" aria-label="Edit ${alarm.label}">✎</button>
       <button class="alarm-remove-btn" data-remove="${alarm.id}" aria-label="Remove ${alarm.label}">×</button>
     </div>
   `).join('');
@@ -167,6 +199,13 @@ function renderAlarmList() {
     toggle.addEventListener('click', () => {
       toggleAlarm(toggle.dataset.toggle);
       renderAlarmList();
+    });
+  });
+
+  // Edit handlers
+  container.querySelectorAll('.alarm-edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      editAlarm(btn.dataset.edit);
     });
   });
 
@@ -275,10 +314,11 @@ function renderParameterForm(templateKey) {
   `;
 
   // Action buttons
+  const saveText = formData._editingId ? 'Save Changes' : 'Save Alarm';
   html += `
     <div class="form-actions">
       <button id="back-to-templates" class="back-btn">← Back</button>
-      <button id="save-alarm" class="save-btn">Save Alarm</button>
+      <button id="save-alarm" class="save-btn">${saveText}</button>
     </div>
     <div id="form-error" class="error hidden"></div>
   `;
@@ -383,6 +423,53 @@ function renderDateFilterPicker() {
 }
 
 /**
+ * Edit an existing alarm.
+ */
+function editAlarm(alarmId) {
+  const alarms = loadAlarms();
+  const alarm = alarms.find(a => a.id === alarmId);
+  if (!alarm) return;
+
+  // Store the ID we're editing
+  formData._editingId = alarmId;
+
+  // Find the template that matches
+  const templateKey = alarm.condition?.template;
+  if (!templateKey) {
+    // No matching template — can't edit
+    return;
+  }
+
+  currentTemplateKey = templateKey;
+
+  // Populate formData with alarm data
+  formData = {
+    _editingId: alarmId,
+    recurrence: alarm.recurrence || 'once',
+    dateFilter: alarm.condition.dateFilter || null,
+  };
+
+  // Populate condition params
+  if (alarm.condition.params) {
+    for (const [key, val] of Object.entries(alarm.condition.params)) {
+      formData[key] = val;
+    }
+  }
+
+  activeTab = 'create';
+  renderAlarmTabs();
+  renderParameterForm(currentTemplateKey);
+
+  // Set notification toggles from saved alarm
+  const notifBrowser = document.querySelector('input[data-notif="browser"]');
+  const notifInApp = document.querySelector('input[data-notif="inApp"]');
+  const notifAudio = document.querySelector('input[data-notif="audio"]');
+  if (notifBrowser) notifBrowser.checked = alarm.notifications?.browser ?? true;
+  if (notifInApp) notifInApp.checked = alarm.notifications?.inApp ?? true;
+  if (notifAudio) notifAudio.checked = alarm.notifications?.audio ?? true;
+}
+
+/**
  * Save alarm from form data.
  */
 function saveAlarmFromForm(templateKey) {
@@ -417,8 +504,7 @@ function saveAlarmFromForm(templateKey) {
   }
 
   // Construct alarm object
-  const alarm = {
-    label: template.label,
+  const alarmData = {
     condition,
     recurrence: formData.recurrence || 'once',
     notifications: {
@@ -428,7 +514,14 @@ function saveAlarmFromForm(templateKey) {
     }
   };
 
-  addAlarm(alarm);
+  if (formData._editingId) {
+    // Editing existing alarm
+    updateAlarm(formData._editingId, alarmData);
+    delete formData._editingId;
+  } else {
+    // New alarm
+    addAlarm({ ...alarmData, label: template.label });
+  }
 
   // Close modal and re-render
   closeAlarmManager();
