@@ -12,6 +12,8 @@ Make the invisible rhythms of time — lunar cycles, solar arcs, alternative cal
 
 **Goal:** Enable user-customizable display formats for each of the 4 clock components (Year, Date, Standard Time, Solar Time), with dropdown selectors for format selection and localStorage persistence.
 
+**Phase 11 complete (2026-04-14):** All 7 Year & Date format renderers implemented and tested (YEAR-01 through DATE-04). 78 renderer tests + 430 total tests pass. Code review issues fixed (NaN guards, non-Date `now` guard, malformed SL/LP validation).
+
 **Target features:**
 - Year format system: Holocene, Gregorian, Chinese lunisolar (cycle name + stem-branch)
 - Date format system: Holocene (M/D), Gregorian, Lunisolar (Chinese), Solar Longitude + Lunar Phase Angle (longitudinal)
@@ -32,12 +34,17 @@ Make the invisible rhythms of time — lunar cycles, solar arcs, alternative cal
 - ✓ Datetime converters — Gregorian ↔ Holocene/Beats, cross-timezone, historical (v0)
 - ✓ Atmospheric visual design — sky gradients, moon phase, beat pulse, typography (v0)
 - ✓ Alarm system — time-based, astronomical events, composable conditions (v0)
+- ✓ **YEAR-01**: Holocene year renderer — `H{year}` format (Validated in Phase 11)
+- ✓ **YEAR-02**: Gregorian year renderer — UTC year string (Validated in Phase 11)
+- ✓ **YEAR-03**: Meghalayan year renderer — `Mgh/Ngp/Grn{year}` format (Validated in Phase 11)
+- ✓ **YEAR-04**: Custom epoch year renderer — user-defined epoch year (Validated in Phase 11)
+- ✓ **DATE-01**: Gregorian date renderer — `M/D` UTC format (Validated in Phase 11)
+- ✓ **DATE-02**: Chinese lunisolar date renderer — `M{n} D{d}` / `MX D{d}` (Validated in Phase 11)
+- ✓ **DATE-03**: Longitudinal date renderer — `☉ XXX° ☽ XXX°` (Validated in Phase 11)
+- ✓ **DATE-04**: Year boundary transitions across calendar systems (Validated in Phase 11)
 
 ### Active
 
-- [ ] **YEAR-01**: Year format customization — Holocene, Gregorian, Chinese lunisolar (stem-branch + cycle year)
-- [ ] **DATE-01**: Date format customization — Holocene (M/D), Gregorian, Lunisolar (Chinese month/day)
-- [ ] **LONG-01**: Longitudinal date display — Solar Longitude (0-360° from Point of Aries) and Lunar Phase Angle (0-360° from New Moon)
 - [ ] **STDTIME-01**: Standard Time 24h format — customizable hour-interval meridian offset (default: UTC/Prime Meridian)
 - [ ] **STDTIME-02**: Standard Time Decimal format — customizable 100-beat-interval offset
 - [ ] **STDTIME-03**: Standard Time Longitudinal format — degree-based offset selection
@@ -65,9 +72,12 @@ Make the invisible rhythms of time — lunar cycles, solar arcs, alternative cal
 - Output: Single-page web app with large centered clock display
 - Build: `webpack-dev-server` for development, outputs to `dist/`
 
-**Existing architecture (post-v0):**
-- `src/chronometers/` — 7 module files (holocene, beats, solar, lunisolar, oldSystem, composer, chineseNewYear)
-- `src/index.js` — Reduced to DOM update + geolocation bootstrap only (33 lines)
+**Existing architecture (post-Phase 11):**
+- `src/chronometers/` — 12 module files (holocene, beats, solar, lunisolar, oldSystem, composer, chineseNewYear, solarLongitude, lunarPhase, solarTime, meghalayan, customEpoch)
+- `src/formats/` — Format config, registry, defaults, and renderer directory
+- `src/formats/renderers/year/` — 4 year renderers: holocene.js, gregorian.js, meghalayan.js, custom.js
+- `src/formats/renderers/date/` — 3 date renderers: gregorian.js, chinese.js, longitudinal.js
+- `src/index.js` — DOM update + geolocation bootstrap
 - `src/styles.css` — Minimal styling (large centered text)
 - `src/template.html` — HTML shell
 - `src/sky.js` — Dynamic sky gradient system (130 lines)
@@ -75,7 +85,7 @@ Make the invisible rhythms of time — lunar cycles, solar arcs, alternative cal
 - `src/location/` — Location system modules (database, search, storage, geolocation, ui)
 - `src/converters/` — Datetime converter modules
 - Webpack 5 build pipeline functional
-- Vitest test suite: 268+ tests passing
+- Vitest test suite: 430 tests passing (37 files)
 
 **Key patterns in current code:**
 - Astronomical calculations use `astronomia` library for precision (Julian dates, equinox)
@@ -129,4 +139,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-14 after v1.0 milestone start*
+*Last updated: 2026-04-14 after Phase 11 (Year & Date Format Renderers) complete*
