@@ -7,7 +7,7 @@
 
 import { getEnabledAlarms, updateAlarm, deleteAlarm } from './store.js';
 import { evaluateAlarm } from './evaluator.js';
-import { fireNotifications, stopNotifications, playChime, stopAudio } from './notifications.js';
+import { fireNotifications, stopNotifications, playChime, stopAudio, removeAlarmOverlay } from './notifications.js';
 import { getActiveLocation } from '../location/store.js';
 
 // In-memory state: tracks which alarms are currently active
@@ -150,6 +150,9 @@ export function initAlarmEngine(location, tickRateMs = 864) {
       const state = activeAlarms.get(alarmId);
       if (state) {
         state.dismissedAt = new Date().toISOString();
+        // Immediately stop audio and remove overlay — don't wait for next tick
+        stopAudio();
+        removeAlarmOverlay();
       }
     }
   };

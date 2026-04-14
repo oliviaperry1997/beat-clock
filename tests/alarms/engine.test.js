@@ -14,7 +14,8 @@ vi.mock('../../src/alarms/notifications.js', () => ({
   fireNotifications: vi.fn(),
   stopNotifications: vi.fn(),
   playChime: vi.fn(),
-  stopAudio: vi.fn()
+  stopAudio: vi.fn(),
+  removeAlarmOverlay: vi.fn()
 }));
 
 vi.mock('../../src/location/store.js', () => ({
