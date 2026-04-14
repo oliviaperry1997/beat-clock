@@ -173,9 +173,11 @@ describe('playChime', () => {
     expect(mockGainNode.connect).toHaveBeenCalledWith(mockAudioContext.destination);
     expect(mockOscillator.start).toHaveBeenCalled();
 
-    // Check gain attack: ramp 0->0.15 in 0.02s
+    // Check gain attack: ramp 0->0.12 in 0.02s, then decay to 0 in 0.3s
     expect(mockGainNode.gain.setValueAtTime).toHaveBeenCalledWith(0, 0);
-    expect(mockGainNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.15, 0.02);
+    expect(mockGainNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.12, 0.02);
+    expect(mockGainNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0, 0.3);
+    expect(mockOscillator.stop).toHaveBeenCalledWith(0.3);
   });
 });
 

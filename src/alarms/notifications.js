@@ -68,8 +68,9 @@ function initAudio() {
 }
 
 /**
- * Starts a continuous audio tone for alarm ringing.
- * @param {number} frequency - Frequency in Hz (default 880).
+ * Plays a single, short chime sound (pleasant two-tone beep).
+ * Called repeatedly by the engine tick while an alarm is active.
+ * @param {number} frequency - Base frequency in Hz (default 880).
  */
 export function playChime(frequency = 880) {
   if (!audioCtx) {
@@ -90,13 +91,17 @@ export function playChime(frequency = 880) {
   oscillator.frequency.value = frequency;
 
   const now = audioCtx.currentTime;
+  // Short, pleasant chime: quick attack, gentle decay
   gainNode.gain.setValueAtTime(0, now);
-  gainNode.gain.linearRampToValueAtTime(0.15, now + 0.02); // Attack
+  gainNode.gain.linearRampToValueAtTime(0.12, now + 0.02); // Attack
+  gainNode.gain.linearRampToValueAtTime(0, now + 0.3); // Decay over 300ms
 
   oscillator.connect(gainNode);
   gainNode.connect(audioCtx.destination);
 
   oscillator.start(now);
+  oscillator.stop(now + 0.3); // Auto-stop after decay
+
   activeOscillator = oscillator;
   activeGain = gainNode;
 }

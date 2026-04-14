@@ -69,14 +69,16 @@ updateClock(null);
 // Initialize location system (handles first-run, active location, etc.)
 let updateInterval = null;
 let alarmEngine = null;
+const TICK_RATE_MS = 864; // 1 centibeat - can be adjusted later for different clock modes
+
 initLocationSystem((location) => {
   updateClock(location);
   if (updateInterval) clearInterval(updateInterval);
-  updateInterval = setInterval(() => updateClock(location), 864);
+  updateInterval = setInterval(() => updateClock(location), TICK_RATE_MS);
 
-  // Reinitialize alarm engine with new location
+  // Reinitialize alarm engine with new location and tick rate
   if (alarmEngine) alarmEngine.stop();
-  alarmEngine = initAlarmEngine(location);
+  alarmEngine = initAlarmEngine(location, TICK_RATE_MS);
 
   // Invalidate astronomical cache on location change
   invalidateCache();

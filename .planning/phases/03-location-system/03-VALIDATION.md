@@ -1,8 +1,8 @@
 ---
 phase: 3
 slug: location-system
-status: draft
-nyquist_compliant: false
+status: ready
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-04-13
 ---
@@ -38,15 +38,13 @@ created: 2026-04-13
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 3-01-01 | 01 | 1 | LOCATION-01 | — | City database loads and indexes correctly | unit | `npm test -- --run location` | ❌ W0 | ⬜ pending |
-| 3-01-02 | 01 | 1 | LOCATION-01 | — | Fuzzy search returns correct results for partial queries | unit | `npm test -- --run search` | ❌ W0 | ⬜ pending |
-| 3-01-03 | 01 | 1 | LOCATION-01 | — | Manual lat/lon validation accepts valid, rejects invalid | unit | `npm test -- --run validation` | ❌ W0 | ⬜ pending |
-| 3-02-01 | 02 | 2 | LOCATION-01 | — | Location saves to localStorage correctly | unit | `npm test -- --run store` | ❌ W0 | ⬜ pending |
-| 3-02-02 | 02 | 2 | LOCATION-01 | — | Active location persists across sessions | unit | `npm test -- --run persistence` | ❌ W0 | ⬜ pending |
-| 3-02-03 | 02 | 2 | LOCATION-01 | — | Multiple locations can be saved and switched | unit | `npm test -- --run multi-location` | ❌ W0 | ⬜ pending |
-| 3-03-01 | 03 | 3 | LOCATION-01 | — | Browser geolocation wrapper handles permissions and timeouts | unit | `npm test -- --run geolocation` | ❌ W0 | ⬜ pending |
-| 3-03-02 | 03 | 3 | LOCATION-01 | — | First-run flow auto-detects or falls back gracefully | integration | `npm test -- --run first-run` | ❌ W0 | ⬜ pending |
-| 3-03-03 | 03 | 3 | LOCATION-01 | — | Location change triggers clock update | integration | `npm test -- --run clock-update` | ❌ W0 | ⬜ pending |
+| 3-01-01 | 01 | 1 | LOCATION-01 | — | City database filter script runs and produces valid JSON | unit | `node scripts/filter-cities.js && test -f src/data/cities.json` | ❌ W0 | ⬜ pending |
+| 3-01-02 | 01 | 1 | LOCATION-01 | — | Manual lat/lon validation accepts valid, rejects invalid | unit | `npm test -- --run tests/location/validation.test.js` | ❌ W0 | ⬜ pending |
+| 3-01-03 | 01 | 1 | LOCATION-01 | — | Fuzzy search returns correct results for partial queries | unit | `npm test -- --run tests/location/search.test.js` | ❌ W0 | ⬜ pending |
+| 3-02-01 | 02 | 2 | LOCATION-01 | — | Location saves to localStorage correctly | unit | `npm test -- --run tests/location/store.test.js` | ❌ W0 | ⬜ pending |
+| 3-02-02 | 02 | 2 | LOCATION-01 | — | Browser geolocation wrapper handles permissions and timeouts | unit | `npm test -- --run tests/location/geolocation.test.js` | ❌ W0 | ⬜ pending |
+| 3-02-03 | 02 | 2 | LOCATION-01 | — | Location UI renders search, manual input, saved locations | integration | `npm test -- --run tests/location/` | ❌ W0 | ⬜ pending |
+| 3-03-01 | 03 | 3 | LOCATION-01 | — | Location change triggers clock update, existing tests pass | integration | `npm test -- --run && npm run build` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -54,10 +52,11 @@ created: 2026-04-13
 
 ## Wave 0 Requirements
 
-- [ ] `tests/location/store.test.js` — localStorage CRUD stubs
-- [ ] `tests/location/search.test.js` — fuzzy search stubs
-- [ ] `tests/location/validation.test.js` — lat/lon validation stubs
-- [ ] `tests/location/geolocation.test.js` — browser geolocation wrapper stubs
+- [ ] `scripts/filter-cities.js` — City database filter build script
+- [ ] `tests/location/validation.test.js` — Lat/lon validation tests
+- [ ] `tests/location/search.test.js` — Fuzzy search tests
+- [ ] `tests/location/store.test.js` — localStorage CRUD tests
+- [ ] `tests/location/geolocation.test.js` — Browser geolocation wrapper tests
 
 ---
 

@@ -1,17 +1,21 @@
 /**
- * Alarm engine — state-based alarm evaluation with active-alarm tracking.
+ * Alarm engine — transition-based alarm evaluation with active-alarm tracking.
  *
- * Alarms transition to "active" when their target time is reached.
+ * Alarms only fire when CROSSING from "not triggered" to "triggered" state.
  * They keep ringing until dismissed or a timeout elapses.
  */
 
 import { getEnabledAlarms, updateAlarm, deleteAlarm } from './store.js';
 import { evaluateAlarm } from './evaluator.js';
-import { fireNotifications, stopNotifications } from './notifications.js';
+import { fireNotifications, stopNotifications, playChime, stopAudio } from './notifications.js';
 import { getActiveLocation } from '../location/store.js';
 
 // In-memory state: tracks which alarms are currently active
 const activeAlarms = new Map();
+
+// Tracks whether each alarm was triggered on the PREVIOUS tick
+// This enables transition-based firing (only fires when crossing from false → true)
+const previousTriggerState = new Map();
 
 // Dismiss callback — set by UI or engine consumers
 let dismissCallback = null;
@@ -28,9 +32,10 @@ export function setDismissCallback(cb) {
  * Initialize the alarm engine.
  * Sets up a tick interval that evaluates alarms every 864ms.
  * @param {Object} location - { latitude, longitude }
+ * @param {number} tickRateMs - Milliseconds between ticks (default 864ms = 1 centibeat)
  * @returns {{ stop: Function, evaluateNow: Function }}
  */
-export function initAlarmEngine(location) {
+export function initAlarmEngine(location, tickRateMs = 864) {
   if (!location) {
     console.warn('Alarm engine: no location provided');
     return { stop: () => {}, evaluateNow: () => {} };
@@ -42,10 +47,11 @@ export function initAlarmEngine(location) {
 
     for (const alarm of alarms) {
       const { triggered } = evaluateAlarm(alarm, now, loc.latitude, loc.longitude);
+      const wasTriggered = previousTriggerState.get(alarm.id) || false;
       const isActive = activeAlarms.has(alarm.id);
 
-      if (triggered && !isActive) {
-        // Alarm just triggered → fire notifications
+      if (triggered && !wasTriggered && !isActive) {
+        // TRANSITION: alarm just crossed the threshold → fire notifications
         const onDismiss = () => {
           if (dismissCallback) dismissCallback(alarm.id);
         };
@@ -82,15 +88,18 @@ export function initAlarmEngine(location) {
                 deleteAlarm(alarm.id);
               }
             } else {
-              // Still ringing → re-fire audio to keep it going
-              stopNotifications(alarm);
+              // Still ringing → play chime for this tick (replaces continuous tone)
+              stopAudio();
               const onDismiss = () => {
                 if (dismissCallback) dismissCallback(alarm.id);
               };
-              fireNotifications(alarm, onDismiss);
+              playChime();
             }
+          } else {
+            // No timeout → play chime every tick until dismissed
+            stopAudio();
+            playChime();
           }
-          // No timeout → keep ringing indefinitely, no action needed
         }
       } else if (!triggered && isActive) {
         // Condition no longer met (e.g., beat passed for daily alarm)
@@ -102,13 +111,19 @@ export function initAlarmEngine(location) {
         activeAlarms.delete(alarm.id);
       }
       // !triggered && !isActive → nothing to do
+
+      // Update previous state for next tick's transition detection
+      previousTriggerState.set(alarm.id, triggered);
     }
   }
 
-  const intervalId = setInterval(() => tick(location), 864);
+  const intervalId = setInterval(() => tick(location), tickRateMs);
 
   return {
-    stop: () => clearInterval(intervalId),
+    stop: () => {
+      clearInterval(intervalId);
+      previousTriggerState.clear();
+    },
     evaluateNow: () => tick(location),
     getActiveAlarms: () => {
       const result = [];
@@ -131,10 +146,12 @@ export function initAlarmEngine(location) {
  */
 export function resetActiveAlarms() {
   activeAlarms.clear();
+  previousTriggerState.clear();
 }
 
 /**
  * Handle missed alarms when tab becomes visible again.
+ * Uses transition-based logic — only fires if alarm wasn't previously triggered.
  * Evaluates all enabled alarms against current time to catch up.
  */
 export function handleMissedAlarms() {
@@ -146,13 +163,17 @@ export function handleMissedAlarms() {
 
   for (const alarm of alarms) {
     const { triggered } = evaluateAlarm(alarm, now, location.latitude, location.longitude);
-    if (triggered && !activeAlarms.has(alarm.id)) {
+    const wasTriggered = previousTriggerState.get(alarm.id) || false;
+
+    // Only fire if crossing the threshold (not if already triggered before tab was hidden)
+    if (triggered && !wasTriggered && !activeAlarms.has(alarm.id)) {
       fireNotifications(alarm);
       activeAlarms.set(alarm.id, {
         startedAt: now.toISOString(),
         dismissedAt: null,
       });
       updateAlarm(alarm.id, { lastFiredAt: now.toISOString() });
+      previousTriggerState.set(alarm.id, triggered);
     }
   }
 }

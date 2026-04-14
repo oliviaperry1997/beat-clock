@@ -12,7 +12,9 @@ vi.mock('../../src/alarms/evaluator.js', () => ({
 
 vi.mock('../../src/alarms/notifications.js', () => ({
   fireNotifications: vi.fn(),
-  stopNotifications: vi.fn()
+  stopNotifications: vi.fn(),
+  playChime: vi.fn(),
+  stopAudio: vi.fn()
 }));
 
 vi.mock('../../src/location/store.js', () => ({
@@ -21,10 +23,11 @@ vi.mock('../../src/location/store.js', () => ({
 
 import { getEnabledAlarms, updateAlarm, deleteAlarm } from '../../src/alarms/store.js';
 import { evaluateAlarm } from '../../src/alarms/evaluator.js';
-import { fireNotifications } from '../../src/alarms/notifications.js';
+import { fireNotifications, stopNotifications } from '../../src/alarms/notifications.js';
 import { getActiveLocation } from '../../src/location/store.js';
 
 import { initAlarmEngine, handleMissedAlarms, resetActiveAlarms } from '../../src/alarms/engine.js';
+import { playChime, stopAudio } from '../../src/alarms/notifications.js';
 
 const mockLocationData = { latitude: 40.7128, longitude: -74.0060 };
 
@@ -82,7 +85,22 @@ describe('initAlarmEngine', () => {
     engine.stop();
   });
 
-  it('fires notifications when evaluateAlarm returns true', () => {
+  it('fires notifications only when evaluateAlarm transitions from false to true', () => {
+    const alarms = [
+      { id: 'alm_1', enabled: true, oneTime: false, recurrence: 'daily', lastFiredAt: null }
+    ];
+    getEnabledAlarms.mockReturnValue(alarms);
+    // First tick: triggered=true, but no previous state → should fire (first run is special case)
+    evaluateAlarm.mockReturnValue({ triggered: true });
+
+    const engine = initAlarmEngine(mockLocationData);
+    engine.evaluateNow();
+
+    expect(fireNotifications).toHaveBeenCalled();
+    engine.stop();
+  });
+
+  it('does NOT fire notifications when alarm was already triggered on previous tick', () => {
     const alarms = [
       { id: 'alm_1', enabled: true, oneTime: false, recurrence: 'daily', lastFiredAt: null }
     ];
@@ -90,9 +108,60 @@ describe('initAlarmEngine', () => {
     evaluateAlarm.mockReturnValue({ triggered: true });
 
     const engine = initAlarmEngine(mockLocationData);
-    engine.evaluateNow();
 
-    expect(fireNotifications).toHaveBeenCalled();
+    // First tick — fires (transition from false → true)
+    engine.evaluateNow();
+    expect(fireNotifications).toHaveBeenCalledTimes(1);
+
+    // Second tick — still triggered, but no transition (was already true) → should NOT fire again
+    // BUT it should play chime since alarm is still active
+    engine.evaluateNow();
+    expect(fireNotifications).toHaveBeenCalledTimes(1); // Still 1, not 2
+    expect(playChime).toHaveBeenCalled(); // But chime plays
+    engine.stop();
+  });
+
+  it('plays chime every tick while alarm is active and not dismissed', () => {
+    const alarms = [
+      { id: 'alm_1', enabled: true, oneTime: false, recurrence: 'daily', lastFiredAt: null }
+    ];
+    getEnabledAlarms.mockReturnValue(alarms);
+    evaluateAlarm.mockReturnValue({ triggered: true });
+
+    const engine = initAlarmEngine(mockLocationData);
+
+    // First tick — fires
+    engine.evaluateNow();
+    expect(fireNotifications).toHaveBeenCalledTimes(1);
+
+    // Subsequent ticks — chime plays each tick
+    engine.evaluateNow();
+    engine.evaluateNow();
+    expect(playChime).toHaveBeenCalledTimes(2); // Once per tick after first
+    engine.stop();
+  });
+
+  it('stops playing chime after alarm is dismissed', () => {
+    const alarms = [
+      { id: 'alm_1', enabled: true, oneTime: false, recurrence: 'daily', lastFiredAt: null }
+    ];
+    getEnabledAlarms.mockReturnValue(alarms);
+    evaluateAlarm.mockReturnValue({ triggered: true });
+
+    const engine = initAlarmEngine(mockLocationData);
+
+    // First tick — fires
+    engine.evaluateNow();
+    expect(fireNotifications).toHaveBeenCalledTimes(1);
+    const playChimeCountAfterFire = playChime.mock.calls.length;
+
+    // Dismiss the alarm
+    engine.dismissAlarm('alm_1');
+
+    // Next tick — should stop notifications, no chime
+    engine.evaluateNow();
+    expect(stopNotifications).toHaveBeenCalled();
+    expect(playChime.mock.calls.length).toBe(playChimeCountAfterFire); // No additional chime
     engine.stop();
   });
 
