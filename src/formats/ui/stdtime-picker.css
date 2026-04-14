@@ -1,0 +1,34 @@
+.stdtime-picker {
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
+}
+
+.stdtime-picker__control {
+  padding: 0.45rem 0.8rem;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  color: inherit;
+  font: inherit;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(10px);
+}
+
+.stdtime-picker__control:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.45);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .stdtime-picker {
+    top: 4.5rem;
+  }
+
+  .stdtime-picker__control {
+    font-size: 0.9rem;
+  }
+}

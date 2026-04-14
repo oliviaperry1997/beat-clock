@@ -19,36 +19,36 @@ function utc(h, m = 0, s = 0, ms = 0) {
 
 describe('cross-renderer consistency', () => {
 
-  it('at UTC noon offset 0: 24h=12:00, decimal=@500.00, longitudinal=⌚ 180.00°', () => {
+  it('at UTC noon offset 0: 24h=12:00, decimal=@500.00, longitudinal=⏲ 180.00°', () => {
     const data = { now: utc(12) };
     const opts = { meridianOffset: 0 };
     expect(render24h(data, opts)).toBe('12:00');
     expect(renderDecimal(data, opts)).toBe('@500.00');
-    expect(renderLongitudinal(data, opts)).toBe('⌚ 180.00°');
+    expect(renderLongitudinal(data, opts)).toBe('⏲ 180.00°');
   });
 
-  it('at UTC midnight offset 0: 24h=00:00, decimal=@000.00, longitudinal=⌚ 0.00°', () => {
+  it('at UTC midnight offset 0: 24h=00:00, decimal=@000.00, longitudinal=⏲ 0.00°', () => {
     const data = { now: utc(0) };
     const opts = { meridianOffset: 0 };
     expect(render24h(data, opts)).toBe('00:00');
     expect(renderDecimal(data, opts)).toBe('@000.00');
-    expect(renderLongitudinal(data, opts)).toBe('⌚ 0.00°');
+    expect(renderLongitudinal(data, opts)).toBe('⏲ 0.00°');
   });
 
-  it('at 06:00 UTC offset 0: 24h=06:00, decimal=@250.00, longitudinal=⌚ 90.00°', () => {
+  it('at 06:00 UTC offset 0: 24h=06:00, decimal=@250.00, longitudinal=⏲ 90.00°', () => {
     const data = { now: utc(6) };
     const opts = { meridianOffset: 0 };
     expect(render24h(data, opts)).toBe('06:00');
     expect(renderDecimal(data, opts)).toBe('@250.00');
-    expect(renderLongitudinal(data, opts)).toBe('⌚ 90.00°');
+    expect(renderLongitudinal(data, opts)).toBe('⏲ 90.00°');
   });
 
-  it('at 18:00 UTC offset 0: 24h=18:00, decimal=@750.00, longitudinal=⌚ 270.00°', () => {
+  it('at 18:00 UTC offset 0: 24h=18:00, decimal=@750.00, longitudinal=⏲ 270.00°', () => {
     const data = { now: utc(18) };
     const opts = { meridianOffset: 0 };
     expect(render24h(data, opts)).toBe('18:00');
     expect(renderDecimal(data, opts)).toBe('@750.00');
-    expect(renderLongitudinal(data, opts)).toBe('⌚ 270.00°');
+    expect(renderLongitudinal(data, opts)).toBe('⏲ 270.00°');
   });
 
   it('all three renderers wrap midnight correctly for offset +3h (22:00 UTC → 01:00 local)', () => {
@@ -58,11 +58,11 @@ describe('cross-renderer consistency', () => {
 
     expect(render24h(data, opts)).toBe('01:00');
 
-    // 1h = 3600000ms / 86400 = 41.66 beats (floored)
-    expect(renderDecimal(data, opts)).toBe('@041.66');
+    // 1h = 3600000ms / 86400 = 41.67 beats
+    expect(renderDecimal(data, opts)).toBe('@041.67');
 
     // 1h = 3600000ms / 86400000 * 360 = 15°
-    expect(renderLongitudinal(data, opts)).toBe('⌚ 15.00°');
+    expect(renderLongitudinal(data, opts)).toBe('⏲ 15.00°');
   });
 
   it('all three renderers consistent for negative offset crossing midnight backward (02:00 UTC − 4h → 22:00)', () => {
@@ -71,11 +71,11 @@ describe('cross-renderer consistency', () => {
 
     expect(render24h(data, opts)).toBe('22:00');
 
-    // 22h = 79200000ms / 86400 = 916.66 beats (floored)
-    expect(renderDecimal(data, opts)).toBe('@916.66');
+    // 22h = 79200000ms / 86400 = 916.67 beats
+    expect(renderDecimal(data, opts)).toBe('@916.67');
 
     // 22h = 79200000ms / 86400000 * 360 = 330°
-    expect(renderLongitudinal(data, opts)).toBe('⌚ 330.00°');
+    expect(renderLongitudinal(data, opts)).toBe('⏲ 330.00°');
   });
 
 });
@@ -141,7 +141,7 @@ describe('fractional meridian offsets', () => {
   it('NPT +5.75h: longitudinal renderer handles fractional offset correctly', () => {
     // UTC midnight + 5.75h = 20700000ms → 20700000 / 86400000 * 360 = 86.25°
     const data = { now: utc(0) };
-    expect(renderLongitudinal(data, { meridianOffset: 5.75 })).toBe('⌚ 86.25°');
+    expect(renderLongitudinal(data, { meridianOffset: 5.75 })).toBe('⏲ 86.25°');
   });
 
 });
@@ -192,7 +192,7 @@ describe('extreme meridian offsets', () => {
     for (const now of times) {
       for (const meridianOffset of offsets) {
         const result = renderLongitudinal({ now }, { meridianOffset });
-        // strip '⌚ ' prefix (3 chars) and '°' suffix (1 char)
+        // strip '⏲ ' prefix (3 chars) and '°' suffix (1 char)
         const numStr = result.slice(2, -1);
         const deg = parseFloat(numStr);
         expect(deg).toBeGreaterThanOrEqual(0);
@@ -220,7 +220,7 @@ describe('millisecond precision', () => {
   it('longitudinal renderer includes sub-minute precision: 12:01:00 → 180.25°', () => {
     // 12h 1m = 43260000ms / 86400000 * 360 = 180.25°
     const data = { now: new Date(Date.UTC(2026, 0, 1, 12, 1, 0, 0)) };
-    expect(renderLongitudinal(data, { meridianOffset: 0 })).toBe('⌚ 180.25°');
+    expect(renderLongitudinal(data, { meridianOffset: 0 })).toBe('⏲ 180.25°');
   });
 
   it('24h renderer: minutes are taken from UTC (fractional offset does not affect minute display)', () => {
@@ -253,12 +253,12 @@ describe('error state consistency across renderers', () => {
     expect(renderDecimal(undefined)).toBe('@???');
   });
 
-  it('longitudinal returns ⌚ ???° for null data', () => {
-    expect(renderLongitudinal(null)).toBe('⌚ ???°');
+  it('longitudinal returns ⏲ ???° for null data', () => {
+    expect(renderLongitudinal(null)).toBe('⏲ ???°');
   });
 
-  it('longitudinal returns ⌚ ???° for undefined data', () => {
-    expect(renderLongitudinal(undefined)).toBe('⌚ ???°');
+  it('longitudinal returns ⏲ ???° for undefined data', () => {
+    expect(renderLongitudinal(undefined)).toBe('⏲ ???°');
   });
 
   it('all three renderers accept data={} without throwing (fall back to new Date())', () => {
@@ -310,7 +310,7 @@ describe('registry integration smoke test', () => {
     const fn = getRenderer('stdTime', 'longitudinal');
     expect(typeof fn).toBe('function');
     const data = { now: utc(12) };
-    expect(fn(data)).toBe('⌚ 180.00°');
+    expect(fn(data)).toBe('⏲ 180.00°');
   });
 
 });

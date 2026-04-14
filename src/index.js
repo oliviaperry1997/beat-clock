@@ -6,6 +6,10 @@ import { getSkyGradientColors } from "./sky.js";
 import { initAlarmEngine, setDismissCallback, handleMissedAlarms } from "./alarms/engine.js";
 import { initAlarmSystem } from "./alarms/ui.js";
 import { invalidateCache } from "./alarms/astro-cache.js";
+import { getFormat } from "./formats/config.js";
+import { getRenderer } from "./formats/registry.js";
+import { tickRateForFormat } from "./formats/tick-rate.js";
+import { initStdTimePicker, STDTIME_FORMAT_CHANGE_EVENT } from "./formats/ui/stdtime-picker.js";
 import "./converters/styles.css";
 
 function updateMoonIndicator(lunisolar) {
@@ -39,6 +43,25 @@ function updateMoonIndicator(lunisolar) {
   moonSvg.setAttribute('d', d);
 }
 
+function getActiveStdTimeFormat() {
+  const formatId = getFormat('stdTime');
+  return getRenderer('stdTime', formatId) ? formatId : '24h';
+}
+
+function getStdTimeString(now) {
+  const formatId = getActiveStdTimeFormat();
+  const renderStdTime = getRenderer('stdTime', formatId) ?? getRenderer('stdTime', '24h');
+  const options = formatId === '24h'
+    ? { showSeconds: true, meridianOffset: 0 }
+    : { meridianOffset: 0 };
+
+  return renderStdTime({ now }, options);
+}
+
+function getActiveTickRate() {
+  return tickRateForFormat(getActiveStdTimeFormat());
+}
+
 function updateClock(userLocation) {
   const now = new Date();
   const result = compose(now, {
@@ -51,8 +74,9 @@ function updateClock(userLocation) {
   // Format lunisolar: leap months display as MX (e.g., M6X for leap 6th month)
   const { month, day, isLeap } = lunisolar;
   const monthStr = isLeap ? `${month}X` : `${month}`;
+  const stdTime = getStdTimeString(now);
 
-  const clockText = `H${holocene} M${monthStr} D${day} ${beats} ${solar}`;
+  const clockText = `H${holocene} M${monthStr} D${day} ${stdTime} ${solar}`;
   document.querySelector("#beats-container").textContent = clockText;
 
   // Update sky background
@@ -63,32 +87,60 @@ function updateClock(userLocation) {
   updateMoonIndicator(lunisolar);
 }
 
-// Immediate render on page load (D-09)
-updateClock(null);
-
-// Initialize location system (handles first-run, active location, etc.)
 let updateInterval = null;
 let alarmEngine = null;
-const TICK_RATE_MS = 864; // 1 centibeat - can be adjusted later for different clock modes
+let currentLocation = null;
 
-initLocationSystem((location) => {
-  updateClock(location);
-  if (updateInterval) clearInterval(updateInterval);
-  updateInterval = setInterval(() => updateClock(location), TICK_RATE_MS);
+function restartDisplayLoop() {
+  if (updateInterval) {
+    clearInterval(updateInterval);
+    updateInterval = null;
+  }
 
-  // Reinitialize alarm engine with new location and tick rate
-  if (alarmEngine) alarmEngine.stop();
-  alarmEngine = initAlarmEngine(location, TICK_RATE_MS);
+  if (!currentLocation) return;
 
-  // Wire up dismiss callback so the engine knows when alarms are dismissed
+  updateInterval = setInterval(() => updateClock(currentLocation), getActiveTickRate());
+}
+
+function restartAlarmLoop() {
+  if (!currentLocation) return;
+
+  if (alarmEngine) {
+    alarmEngine.stop();
+  }
+
+  alarmEngine = initAlarmEngine(currentLocation, getActiveTickRate());
   setDismissCallback((alarmId) => alarmEngine.dismissAlarm(alarmId));
+}
+
+function handleLocationReady(location) {
+  currentLocation = location;
+  updateClock(currentLocation);
+  restartDisplayLoop();
+  restartAlarmLoop();
 
   // Invalidate astronomical cache on location change
   invalidateCache();
 
   // Initialize alarm UI once location is ready (pass dismiss callback)
   initAlarmSystem(location, (alarmId) => alarmEngine.dismissAlarm(alarmId));
+}
+
+function handleStdTimeFormatChange() {
+  updateClock(currentLocation);
+  restartDisplayLoop();
+  restartAlarmLoop();
+}
+
+// Immediate render on page load (D-09)
+updateClock(null);
+initStdTimePicker();
+
+initLocationSystem((location) => {
+  handleLocationReady(location);
 });
+
+document.addEventListener(STDTIME_FORMAT_CHANGE_EVENT, handleStdTimeFormatChange);
 
 // Handle missed alarms when tab becomes visible again
 document.addEventListener('visibilitychange', () => {
