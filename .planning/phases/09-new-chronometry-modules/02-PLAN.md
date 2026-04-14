@@ -15,48 +15,74 @@ Create two year computation modules (Meghalayan, Custom Epoch) and wire all 5 ne
 
 ---
 
-### Task 02-01: Meghalayan Year Module
+### Task 02-01: Holocene Stages Module
 
 **files_modified:** src/chronometers/meghalayan.js
 
 <read_first>
 - src/chronometers/holocene.js — existing year chronometer pattern (effective year + epoch offset)
-- .planning/phases/09-new-chronometry-modules/9-CONTEXT.md — decisions D-09, D-10, D-11
+- .planning/phases/09-new-chronometry-modules/9-CONTEXT.md — decisions D-09 through D-14 (Holocene Stages)
 - .planning/phases/09-new-chronometry-modules/9-RESEARCH.md — BCE year handling in JavaScript (astronomical year numbering)
 </read_first>
 
 <action>
 Create `src/chronometers/meghalayan.js` that exports `compute(date, opts)`.
 
+**Note:** Despite the filename matching the roadmap deliverable, this module implements the full Holocene stages system (Greenlandian, Northgrippian, Meghalayan).
+
 Implementation:
 1. Get UTC year from date: `const year = date.getUTCFullYear();`
-2. Compute Meghalayan year: `const meghalayanYear = year + 2200;`
-   - JavaScript's `getUTCFullYear()` returns negative numbers for BCE years using astronomical numbering (2200 BCE = year -2199, so -2199 + 2200 = 1 = Mgh 1). This is correct.
-3. Return as string: `Mgh${meghalayanYear}` (e.g., `Mgh4226` for 2026 CE).
-4. No dependency on location — does NOT return fallback for missing opts. Year computation always works.
+2. Determine which stage the year falls into and compute the year within that stage:
+   ```js
+   // Stage boundaries use JS astronomical year numbering:
+   // 9700 BCE = JS year -9699, 6200 BCE = JS year -6199, 2200 BCE = JS year -2199
+   const MEGHALAYAN_BOUNDARY = -2199;  // 2200 BCE
+   const NORTHGRIPPIAN_BOUNDARY = -6199; // 6200 BCE
 
-Example:
-```js
-// 2026 CE → Mgh4226
-// 1 BCE (year 0 in astronomical) → Mgh2200
-// 2200 BCE (year -2199 in JS) → Mgh1
-```
+   let stage, stageYear, label;
+
+   if (year >= MEGHALAYAN_BOUNDARY) {
+     // Meghalayan: 2200 BCE to present
+     stage = 'meghalayan';
+     stageYear = year + 2200;  // 2026 → 4226
+     label = `Mgh ${stageYear}`;
+   } else if (year >= NORTHGRIPPIAN_BOUNDARY) {
+     // Northgrippian: 6200 BCE to 2200 BCE
+     stage = 'northgrippian';
+     stageYear = year + 6200;  // -3000 (3001 BCE) → 3200
+     label = `Nrg ${stageYear}`;
+   } else {
+     // Greenlandian: 9700 BCE to 6200 BCE
+     stage = 'greenlandian';
+     stageYear = year + 9700;  // -8000 (8001 BCE) → 1700
+     label = `Ghg ${stageYear}`;
+   }
+   ```
+3. Return object: `{ stage, year: stageYear, label }`
+4. No dependency on location — always returns a valid result.
+5. Dates before 9700 BCE (before the Holocene) — return `{ stage: 'pre-holocene', year: null, label: '—' }` as a fallback for pre-Holocene dates.
+
+Example outputs:
+- 2026 CE → `{ stage: 'meghalayan', year: 4226, label: 'Mgh 4226' }`
+- 3000 BCE → `{ stage: 'northgrippian', year: 3200, label: 'Nrg 3200' }`
+- 8000 BCE → `{ stage: 'greenlandian', year: 1700, label: 'Ghg 1700' }`
 </action>
 
 <acceptance_criteria>
 - File `src/chronometers/meghalayan.js` exists
 - Exports `compute` function with signature `compute(date, opts = {})`
 - Does NOT require latitude or longitude in opts
-- Returns string matching pattern `^Mgh\d+$`
-- `compute(Date.UTC(2026, 0, 1))` returns `'Mgh4226'`
-- `compute(Date.UTC(1, 0, 1))` (1 CE) returns `'Mgh2201'`
-- `compute(Date.UTC(-2199, 0, 1))` (2200 BCE) returns `'Mgh1'`
-- `compute(Date.UTC(-2200, 0, 1))` (2201 BCE) returns `'Mgh0'`
+- Returns object with `{ stage, year, label }` shape
+- `compute(Date.UTC(2026, 0, 1))` returns `{ stage: 'meghalayan', year: 4226, label: 'Mgh 4226' }`
+- `compute(Date.UTC(-3000, 0, 1))` (3001 BCE) returns `{ stage: 'northgrippian', year: 3200, label: 'Nrg 3200' }`
+- `compute(Date.UTC(-8000, 0, 1))` (8001 BCE) returns `{ stage: 'greenlandian', year: 1700, label: 'Ghg 1700' }`
+- `compute(Date.UTC(-9700, 0, 1))` (9701 BCE) returns `{ stage: 'pre-holocene', year: null, label: '—' }`
+- Stage transitions at exact boundaries (2200 BCE = Mgh 1, 6200 BCE = Nrg 1, 9700 BCE = Ghg 1)
 </acceptance_criteria>
 
 ---
 
-### Task 02-02: Meghalayan Year Tests
+### Task 02-02: Holocene Stages Tests
 
 **files_modified:** tests/pure/meghalayan.test.js
 
@@ -68,13 +94,15 @@ Example:
 <action>
 Create `tests/pure/meghalayan.test.js` with these test cases:
 
-1. `'returns Mgh4226 for 2026 CE'` — Date.UTC(2026, 0, 1) → 'Mgh4226'
-2. `'returns Mgh1 for 2200 BCE'` — Date.UTC(-2199, 0, 1) → 'Mgh1'
-3. `'returns Mgh2201 for 1 CE'` — Date.UTC(1, 0, 1) → 'Mgh2201'
-4. `'returns Mgh2200 for 1 BCE'` — Date.UTC(0, 0, 1) → 'Mgh2200'
-5. `'returns correct value for year 2000'` — Date.UTC(2000, 6, 1) → 'Mgh4200'
-6. `'returns a string starting with Mgh for any date'` — new Date() → matches /^Mgh/
-7. `'ignores opts parameter'` — compute(date, {}) === compute(date, { anything: true })
+1. `'returns Meghalayan for 2026 CE'` — Date.UTC(2026, 0, 1) → `{ stage: 'meghalayan', year: 4226, label: 'Mgh 4226' }`
+2. `'returns Meghalayan 1 for 2200 BCE'` — Date.UTC(-2199, 0, 1) → `{ stage: 'meghalayan', year: 1, label: 'Mgh 1' }`
+3. `'returns Northgrippian for 3000 BCE'` — Date.UTC(-2999, 0, 1) → `{ stage: 'northgrippian', year: 3200, label: 'Nrg 3200' }`
+4. `'returns Northgrippian 1 for 6200 BCE boundary'` — Date.UTC(-6199, 0, 1) → `{ stage: 'northgrippian', year: 1, label: 'Nrg 1' }`
+5. `'returns Greenlandian for 8000 BCE'` — Date.UTC(-7999, 0, 1) → `{ stage: 'greenlandian', year: 1700, label: 'Ghg 1700' }`
+6. `'returns Greenlandian 1 for 9700 BCE boundary'` — Date.UTC(-9699, 0, 1) → `{ stage: 'greenlandian', year: 1, label: 'Ghg 1' }`
+7. `'returns pre-holocene for 10000 BCE'` — Date.UTC(-9999, 0, 1) → `{ stage: 'pre-holocene', year: null, label: '—' }`
+8. `'returns correct object shape for any date'` — new Date() → has `stage`, `year`, `label` properties
+9. `'ignores opts parameter'` — compute(date, {}) === compute(date, { anything: true })
 </action>
 
 <acceptance_criteria>
@@ -82,7 +110,9 @@ Create `tests/pure/meghalayan.test.js` with these test cases:
 - Uses `// @vitest-environment node` pragma
 - Imports `{ describe, it, expect }` from 'vitest'
 - Imports `{ compute }` from '../../src/chronometers/meghalayan.js'
-- Contains at least 7 test cases
+- Contains at least 9 test cases
+- Tests verify all three stages + pre-holocene boundary
+- Tests verify stage transition boundaries
 - All tests pass: `npx vitest run tests/pure/meghalayan.test.js` exits 0
 </acceptance_criteria>
 
@@ -209,12 +239,12 @@ Add try/catch blocks in the `compose` function AFTER the existing lunisolar bloc
     result.solarTime = 'ST??';
   }
 
-  // Meghalayan
+  // Meghalayan (Holocene Stages)
   try {
     result.meghalayan = computeMeghalayan(date, opts);
   } catch (error) {
     console.warn('meghalayan', error);
-    result.meghalayan = '??';
+    result.meghalayan = { stage: '??', year: null, label: '??' };
   }
 
   // Custom Epoch
@@ -233,6 +263,7 @@ The opts object already flows through from the caller. The `customEpoch` module 
 - File `src/chronometers/index.js` imports all 5 new compute functions
 - compose() function includes try/catch blocks for all 5 new modules
 - Each try/catch uses the correct fallback value (matching module's fallback pattern)
+- Holocene stages fallback is object: `{ stage: '??', year: null, label: '??' }`
 - console.warn calls use correct module name strings: 'solarLongitude', 'lunarPhase', 'solarTime', 'meghalayan', 'customEpoch'
 - Existing 4 modules (holocene, beats, solar, lunisolar) are unchanged
 - File still exports `compose` function
@@ -259,7 +290,7 @@ Add test cases:
 4. `'includes meghalayan in result'` — compose(date, opts) → result.meghalayan is defined
 5. `'includes customEpoch in result'` — compose(date, opts) → result.customEpoch is defined
 6. `'existing modules still present'` — result.holocene, result.beats, result.solar, result.lunisolar all defined
-7. `'returns fallback when no location provided'` — compose(date, {}) → solarLongitude='SL??', lunarPhase='LP??', solarTime='ST??' (meghalayan and customEpoch have different fallback behavior)
+7. `'returns fallback when no location provided'` — compose(date, {}) → solarLongitude='SL??', lunarPhase='LP??', solarTime='ST??', meghalayan is object with stage='??', customEpoch='CE??' (meghalayan has different fallback behavior — returns object)
 </action>
 
 <acceptance_criteria>
@@ -272,11 +303,14 @@ Add test cases:
 
 ## must_haves
 
-1. Meghalayan formula: `year + 2200` (JavaScript astronomical year numbering handles BCE correctly)
-2. Custom epoch returns fallback `'CE??'` when opts.customEpoch is missing or invalid
-3. All 5 new modules wired into composer with try/catch error boundaries
-4. No regression in existing holocene, beats, solar, lunisolar module tests
-5. Composer output includes all 9 modules (4 existing + 5 new)
+1. Holocene stages module returns `{ stage, year, label }` object — not a plain string
+2. Three stage boundaries correct: Greenlandian (9700 BCE), Northgrippian (6200 BCE), Meghalayan (2200 BCE)
+3. Year count per stage counts forward from that stage's epoch (9700+, 6200+, 2200+ gregorianYear)
+4. Pre-Holocene dates (before 9700 BCE) return `{ stage: 'pre-holocene', year: null, label: '—' }`
+5. Custom epoch returns fallback `'CE??'` when opts.customEpoch is missing or invalid
+6. All 5 new modules wired into composer with try/catch error boundaries
+7. No regression in existing holocene, beats, solar, lunisolar module tests
+8. Composer output includes all 9 modules (4 existing + 5 new)
 
 ## Verification
 

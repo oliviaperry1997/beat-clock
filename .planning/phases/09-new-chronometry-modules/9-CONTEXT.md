@@ -29,24 +29,38 @@ UI selectors, format configuration, and display belong in later phases. This pha
 - **D-07:** Use `astronomia` `equationOfTime(T)` for the equation of time correction. Sub-second accuracy, single function call.
 - **D-08:** Solar time = local mean solar time + equation of time correction.
 
-### Meghalayan Year
-- **D-09:** Epoch: 2200 BCE = Mgh 1. Formula: `meghalayanYear = gregorianYear + 2200`.
-- **D-10:** 2026 CE = Mgh 4226 (verified: 2200 + 2026 = 4226).
-- **D-11:** Module computes year value given an effective Gregorian year. Year boundary tick behavior is determined by the active Date system, not by the year system itself. (See D-13.)
+### Holocene Stages (Greenlandian, Northgrippian, Meghalayan)
+- **D-09:** The "Meghalayan" module is actually a Holocene stages system — returns which of the three Holocene stages the date falls into, with the year count for that stage.
+- **D-10:** Stage boundaries (BCE years, astronomical year numbering in JS):
+  - **Greenlandian**: 9700 BCE to 6200 BCE (start of Holocene to 8.2kya event)
+  - **Northgrippian**: 6200 BCE to 2200 BCE (8.2kya event to 4.2kya event)
+  - **Meghalayan**: 2200 BCE to present (4.2kya event onward)
+- **D-11:** Year count per stage counts forward from that stage's epoch:
+  - Greenlandian year = `9700 + gregorianYear` (for dates 9700 BCE to 6200 BCE)
+  - Northgrippian year = `6200 + gregorianYear` (for dates 6200 BCE to 2200 BCE)
+  - Meghalayan year = `2200 + gregorianYear` (for dates 2200 BCE onward)
+  - Using JS astronomical year numbering: 2200 BCE = JS year -2199, so -2199 + 2200 = 1 = Mgh 1 ✓
+- **D-12:** Module returns an object `{ stage, year, label }` where:
+  - `stage`: `'greenlandian' | 'northgrippian' | 'meghalayan'`
+  - `year`: the year number within that stage
+  - `label`: pre-formatted display string (e.g., `'Mgh 4226'`, `'Nrg 4001'`, `'Ghg 3501'`)
+  - This structured return enables the converter (later milestone) to know which stage a date belongs to
+- **D-13:** 2026 CE = Mgh 4226 (verified: 2026 + 2200 = 4226)
+- **D-14:** Year boundary tick behavior is determined by the active Date system, not by the year system itself. (See D-16.)
 
 ### Custom Epoch Year
-- **D-12:** Custom epoch date passed via `opts.customEpoch` parameter to `compute(date, opts)`. Keeps module a pure function.
-- **D-13:** Year counter increments from the custom epoch date. If `opts.customEpoch` is not provided, return a fallback (e.g., `??` or 0).
+- **D-15:** Custom epoch date passed via `opts.customEpoch` parameter to `compute(date, opts)`. Keeps module a pure function.
+- **D-16:** Year counter increments from the custom epoch date. If `opts.customEpoch` is not provided, return a fallback (e.g., `??` or 0).
 
 ### Year Boundary Principle (Cross-cutting)
-- **D-13:** Year chronometers are "dumb" counters — they compute a year value given an effective Gregorian year and epoch reference.
-- **D-14:** When the year counter ticks (Jan 1, CNY, vernal equinox) is determined by the active Date system, not the Year system. This is an orchestration concern for the composer/format layer, not individual chronometer modules.
-- **D-15:** Meghalayan and Custom Epoch modules follow the same pattern as Holocene: receive a date, compute effective year, return year value. The Date system's tick behavior determines what "effective year" means at the orchestration layer.
+- **D-17:** Year chronometers are "dumb" counters — they compute a year value given an effective Gregorian year and epoch reference.
+- **D-18:** When the year counter ticks (Jan 1, CNY, vernal equinox) is determined by the active Date system, not the Year system. This is an orchestration concern for the composer/format layer, not individual chronometer modules.
+- **D-19:** Holocene Stages and Custom Epoch modules follow the same pattern as Holocene: receive a date, compute effective year, return year value. The Date system's tick behavior determines what "effective year" means at the orchestration layer.
 
 ### Module Interface
-- **D-16:** All new modules export `compute(date, opts)` — same signature as existing chronometers.
-- **D-17:** All modules wrapped in composer try/catch — on error, return fallback string (`'??'` or `0` as appropriate).
-- **D-18:** Test pattern: `tests/pure/{moduleName}.test.js` using vitest, matching existing test conventions.
+- **D-20:** All new modules export `compute(date, opts)` — same signature as existing chronometers.
+- **D-21:** All modules wrapped in composer try/catch — on error, return fallback string (`'??'` or `0` as appropriate). Holocene stages returns `{ stage: '??', year: null, label: '??' }` on error.
+- **D-22:** Test pattern: `tests/pure/{moduleName}.test.js` using vitest, matching existing test conventions.
 
 ### Claude's Discretion
 - Exact return value formatting (number vs formatted string)
@@ -103,7 +117,7 @@ UI selectors, format configuration, and display belong in later phases. This pha
 <deferred>
 ## Deferred Ideas
 
-- Meghalayan year tied to a specific historical date — rejected, geological record is too fuzzy
+- Single Meghalayan-only year counter — rejected, user wants all three Holocene stages for converter foundation
 - Custom epoch UI for setting the epoch date — Phase 14 (Format Selector UI)
 - VSOP87-level precision — not needed at integer display resolution
 - Year system-specific tick behavior — rejected, user wants tick behavior governed by Date system
