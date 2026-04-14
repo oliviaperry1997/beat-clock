@@ -3,7 +3,7 @@ import { compose } from "./chronometers/index.js";
 import { initLocationSystem } from "./location/ui.js";
 import { initConverterPanel } from "./converters/ui.js";
 import { getSkyGradientColors } from "./sky.js";
-import { initAlarmEngine, handleMissedAlarms } from "./alarms/engine.js";
+import { initAlarmEngine, setDismissCallback, handleMissedAlarms } from "./alarms/engine.js";
 import { initAlarmSystem } from "./alarms/ui.js";
 import { invalidateCache } from "./alarms/astro-cache.js";
 import "./converters/styles.css";
@@ -79,6 +79,9 @@ initLocationSystem((location) => {
   // Reinitialize alarm engine with new location and tick rate
   if (alarmEngine) alarmEngine.stop();
   alarmEngine = initAlarmEngine(location, TICK_RATE_MS);
+
+  // Wire up dismiss callback so the engine knows when alarms are dismissed
+  setDismissCallback((alarmId) => alarmEngine.dismissAlarm(alarmId));
 
   // Invalidate astronomical cache on location change
   invalidateCache();
