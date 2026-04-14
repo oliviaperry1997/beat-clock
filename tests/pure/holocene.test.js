@@ -30,4 +30,9 @@ describe('holocene chronometer', () => {
     const result = compute(date);
     expect(typeof result).toBe('number');
   });
+
+  it('returns ?? for pre-Holocene dates (before 9700 BCE)', () => {
+    const date = new Date(Date.UTC(-9700, 0, 1)); // 9701 BCE
+    expect(compute(date)).toBe('??');
+  });
 });
