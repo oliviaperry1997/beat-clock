@@ -20,7 +20,8 @@
  * @returns {string} Formatted date string: 'M/D', 'M/D+', or 'M/D-'
  */
 export function render(data, opts = {}) {
-  const now = data?.now ?? new Date();
+  const raw = data?.now;
+  const now = (raw instanceof Date && !isNaN(raw)) ? raw : new Date();
   const month = now.getUTCMonth() + 1;
   const day = now.getUTCDate();
   const suffix = opts.solarDateDiffsStdDate === 'ahead' ? '+'

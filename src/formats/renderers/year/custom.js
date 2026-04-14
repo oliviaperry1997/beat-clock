@@ -38,12 +38,11 @@ export function render(data, opts = {}) {
   }
 
   // Error fallback
+  const label = opts.customLabel ?? 'Y';
   if (year == null) {
-    const label = opts.customLabel ?? 'Y';
     return `${label}??`;
   }
 
-  const label = opts.customLabel ?? 'Y';
   const pos = opts.customLabelPosition ?? 'prefix';
   return pos === 'suffix' ? `${year}${label}` : `${label}${year}`;
 }

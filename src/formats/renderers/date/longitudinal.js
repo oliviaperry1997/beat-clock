@@ -29,11 +29,13 @@ export function render(data, opts = {}) {
   const sl = data?.solarLongitude ?? 'SL??';
   const lp = data?.lunarPhase ?? 'LP??';
 
-  // Strip 'SL' prefix; if value is 'SL??', output '???'
-  const slValue = sl === 'SL??' ? '???' : sl.slice(2);
+  // Strip 'SL' prefix; validate result is a 3-digit numeric string
+  const slStripped = sl.slice(2);
+  const slValue = /^\d{3}$/.test(slStripped) ? slStripped : '???';
 
-  // Strip 'LP' prefix; if value is 'LP??', output '???'
-  const lpValue = lp === 'LP??' ? '???' : lp.slice(2);
+  // Strip 'LP' prefix; validate result is a 3-digit numeric string
+  const lpStripped = lp.slice(2);
+  const lpValue = /^\d{3}$/.test(lpStripped) ? lpStripped : '???';
 
   return `\u2609 ${slValue}\u00B0 \u263D ${lpValue}\u00B0`;
 }

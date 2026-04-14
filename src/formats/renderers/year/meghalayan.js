@@ -52,7 +52,7 @@ function computeStageFromYear(gregorianYear) {
 
 export function render(data, opts = {}) {
   // When effectiveYear is injected by the pipeline, re-compute the stage directly
-  if (data?.effectiveYear != null) {
+  if (data?.effectiveYear != null && !isNaN(data.effectiveYear)) {
     const result = computeStageFromYear(data.effectiveYear);
     if (result === null) return '—';
     const abbr = STAGE_ABBR[result.stage];

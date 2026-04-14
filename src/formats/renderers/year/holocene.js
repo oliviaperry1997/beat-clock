@@ -13,7 +13,7 @@
  * @returns {string} Formatted year string: 'H{year}' or 'H??'
  */
 export function render(data, opts = {}) {
-  if (data?.effectiveYear != null) {
+  if (data?.effectiveYear != null && !isNaN(data.effectiveYear)) {
     return `H${data.effectiveYear + 9700}`;
   }
   return `H${data?.holocene ?? '??'}`;
