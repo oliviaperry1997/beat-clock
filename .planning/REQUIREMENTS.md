@@ -9,17 +9,17 @@ Requirements for Modular Datetime Formats milestone. Each maps to roadmap phases
 
 ### Year Format
 
-- [ ] **YEAR-01**: User can display year in Holocene format (H year, ticks on Chinese New Year)
-- [ ] **YEAR-02**: User can display year in Gregorian format (standard calendar year)
-- [ ] **YEAR-03**: User can display year in Meghalayan format (counting up from 4.2kya event, 2200 BCE = Mgh 1, 2026 CE = Mgh 4226)
-- [ ] **YEAR-04**: User can display year in Custom format (user-defined epoch date as year 1, counts forward)
+- [x] **YEAR-01**: User can display year in Holocene format (H year, ticks on Chinese New Year)
+- [x] **YEAR-02**: User can display year in Gregorian format (standard calendar year)
+- [x] **YEAR-03**: User can display year in Meghalayan format (counting up from 4.2kya event, 2200 BCE = Mgh 1, 2026 CE = Mgh 4226)
+- [x] **YEAR-04**: User can display year in Custom format (user-defined epoch date as year 1, counts forward)
 
 ### Date Format
 
-- [ ] **DATE-01**: User can display date in Gregorian format (standard month/day)
-- [ ] **DATE-02**: User can display date in Chinese lunisolar format (Chinese month/day with leap month notation)
+- [x] **DATE-01**: User can display date in Gregorian format (standard month/day)
+- [x] **DATE-02**: User can display date in Chinese lunisolar format (Chinese month/day with leap month notation)
 - [x] **DATE-03**: User can display date in Longitudinal format (Solar Longitude 0-360° from Point of Aries + Lunar Phase Angle 0-360° from New Moon)
-- [ ] **DATE-04**: Year boundary transitions correctly when Date format changes (e.g., Chinese New Year vs Jan 1 vs Meghalayan epoch) — note: Year format is independently selected but boundary behavior must be consistent
+- [x] **DATE-04**: Year boundary transitions correctly when Date format changes (e.g., Chinese New Year vs Jan 1 vs Meghalayan epoch) — note: Year format is independently selected but boundary behavior must be consistent
 
 ### Standard Time Format
 
@@ -83,14 +83,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| YEAR-01 | Phase 11 | Pending |
-| YEAR-02 | Phase 11 | Pending |
-| YEAR-03 | Phase 11 | Pending |
-| YEAR-04 | Phase 11 | Pending |
-| DATE-01 | Phase 11 | Pending |
-| DATE-02 | Phase 11 | Pending |
+| YEAR-01 | Phase 11 | Complete |
+| YEAR-02 | Phase 11 | Complete |
+| YEAR-03 | Phase 11 | Complete |
+| YEAR-04 | Phase 11 | Complete |
+| DATE-01 | Phase 11 | Complete |
+| DATE-02 | Phase 11 | Complete |
 | DATE-03 | Phase 11 | Complete |
-| DATE-04 | Phase 11 | Pending |
+| DATE-04 | Phase 11 | Complete |
 | STDTIME-01 | Phase 12 | Pending |
 | STDTIME-02 | Phase 12 | Pending |
 | STDTIME-03 | Phase 12 | Pending |
