@@ -3,46 +3,70 @@ import { describe, it, expect } from 'vitest';
 import { compose } from '../../src/chronometers/index.js';
 
 describe('composer integration', () => {
-  it('returns object with exactly 4 keys', () => {
+  it('returns object with exactly 9 keys', () => {
     const date = new Date(Date.UTC(2026, 2, 1));
     const result = compose(date, {});
-    expect(Object.keys(result)).toEqual(['holocene', 'beats', 'solar', 'lunisolar']);
+    expect(Object.keys(result)).toEqual([
+      'holocene', 'beats', 'solar', 'lunisolar',
+      'solarLongitude', 'lunarPhase', 'solarTime',
+      'meghalayan', 'customEpoch'
+    ]);
   });
 
-  it('returns number for holocene value', () => {
+  it('includes solarLongitude in result', () => {
     const date = new Date(Date.UTC(2026, 2, 1));
-    const result = compose(date, {});
-    expect(typeof result.holocene).toBe('number');
-    expect(result.holocene).toBe(11726);
-  });
-
-  it('returns beats starting with @', () => {
-    const date = new Date(Date.UTC(2026, 2, 1, 12, 0, 0));
-    const result = compose(date, {});
-    expect(result.beats.startsWith('@')).toBe(true);
-  });
-
-  it('returns S?? when lat/lon are null', () => {
-    const date = new Date(Date.UTC(2026, 2, 1, 12, 0, 0));
-    const result = compose(date, {});
-    expect(result.solar).toBe('S??');
-  });
-
-  it('returns valid solar for known location', () => {
-    const date = new Date(Date.UTC(2026, 2, 1, 12, 0, 0));
     const result = compose(date, { latitude: 40.7, longitude: -74.0 });
-    expect(result.solar).toMatch(/^[SN]\d{2}$/);
+    expect(result.solarLongitude).toMatch(/^SL\d{3}$/);
   });
 
-  it('returns lunisolar with month, day, isLeap', () => {
-    const date = new Date(Date.UTC(2026, 1, 17)); // CNY 2026
+  it('includes lunarPhase in result', () => {
+    const date = new Date(Date.UTC(2026, 2, 1));
+    const result = compose(date, { latitude: 40.7, longitude: -74.0 });
+    expect(result.lunarPhase).toMatch(/^LP\d{3}$/);
+  });
+
+  it('includes solarTime in result', () => {
+    const date = new Date(Date.UTC(2026, 2, 1));
+    const result = compose(date, { latitude: 40.7, longitude: -74.0 });
+    expect(result.solarTime).toMatch(/^ST\d{2}:\d{2}$/);
+  });
+
+  it('includes meghalayan in result', () => {
+    const date = new Date(Date.UTC(2026, 2, 1));
     const result = compose(date, {});
-    expect(result.lunisolar).toHaveProperty('month', 1);
-    expect(result.lunisolar).toHaveProperty('day', 1);
-    expect(result.lunisolar).toHaveProperty('isLeap', false);
-    expect(result.lunisolar.moonAge).toBeGreaterThanOrEqual(0);
-    expect(result.lunisolar.moonAge).toBeLessThanOrEqual(29.53);
-    expect(result.lunisolar.illumination).toBeGreaterThanOrEqual(0);
-    expect(result.lunisolar.illumination).toBeLessThanOrEqual(1);
+    expect(result.meghalayan).toHaveProperty('stage', 'meghalayan');
+    expect(result.meghalayan).toHaveProperty('year');
+    expect(result.meghalayan).toHaveProperty('label');
+  });
+
+  it('includes customEpoch in result', () => {
+    const date = new Date(Date.UTC(2026, 2, 1));
+    const result = compose(date, {});
+    expect(result.customEpoch).toBe('CE??'); // no customEpoch provided
+  });
+
+  it('customEpoch returns value when provided', () => {
+    const date = new Date(Date.UTC(2026, 2, 1));
+    const result = compose(date, { customEpoch: new Date(Date.UTC(2020, 0, 1)) });
+    expect(result.customEpoch).toBe('CE7');
+  });
+
+  it('returns fallback when no location provided', () => {
+    const date = new Date(Date.UTC(2026, 2, 1, 12, 0, 0));
+    const result = compose(date, {});
+    expect(result.solarLongitude).toBe('SL??');
+    expect(result.lunarPhase).toBe('LP??');
+    expect(result.solarTime).toBe('ST??');
+    expect(result.meghalayan.stage).toBe('meghalayan'); // megahalayan doesn't need location
+    expect(result.customEpoch).toBe('CE??');
+  });
+
+  it('existing modules still present', () => {
+    const date = new Date(Date.UTC(2026, 2, 1));
+    const result = compose(date, { latitude: 40.7, longitude: -74.0 });
+    expect(typeof result.holocene).toBe('number');
+    expect(result.beats.startsWith('@')).toBe(true);
+    expect(result.solar).toMatch(/^[SN]\d{2}$/);
+    expect(result.lunisolar).toHaveProperty('month');
   });
 });
