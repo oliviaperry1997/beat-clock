@@ -71,7 +71,7 @@ export function compose(date, opts = {}) {
     result.solarTime = computeSolarTime(date, opts);
   } catch (error) {
     console.warn('solarTime', error);
-    result.solarTime = 'ST??';
+    result.solarTime = null;
   }
 
   // Meghalayan (Holocene Stages)
