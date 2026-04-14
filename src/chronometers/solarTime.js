@@ -7,12 +7,12 @@ import { eqtime, base, julian } from 'astronomia';
  * @param {object} [opts] - Optional configuration
  * @param {number} [opts.latitude] - Latitude
  * @param {number} [opts.longitude] - Longitude
- * @returns {string} Solar time string (ST{HH}:{MM} 24h format)
+ * @returns {object|null} Object with { hours, minutes, totalMinutes, degrees } or null when location unavailable
  */
 export function compute(date, opts = {}) {
   const { latitude, longitude } = opts;
 
-  if (latitude == null || longitude == null) return 'ST??';
+  if (latitude == null || longitude == null) return null;
 
   const jde = julian.DateToJD(date);
 
@@ -33,6 +33,8 @@ export function compute(date, opts = {}) {
 
   const hours = Math.floor(normalized / 60);
   const minutes = Math.round(normalized % 60);
+  const totalMinutes = hours * 60 + minutes;
+  const degrees = (totalMinutes / 1440) * 360;
 
-  return `ST${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  return { hours, minutes, totalMinutes, degrees };
 }
