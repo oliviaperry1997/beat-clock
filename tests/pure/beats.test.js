@@ -13,14 +13,14 @@ describe('beats chronometer', () => {
     expect(compute(date)).toBe('@500.00');
   });
 
-  it('returns @041.67 at 00:00 UTC (1am BMT)', () => {
+  it('returns @041.66 at 00:00 UTC (1am BMT)', () => {
     const date = new Date(Date.UTC(2026, 0, 1, 0, 0, 0));
-    expect(compute(date)).toBe('@041.67');
+    expect(compute(date)).toBe('@041.66');
   });
 
-  it('returns @999.99 at 22:59:59 UTC', () => {
+  it('returns @999.98 at 22:59:59 UTC', () => {
     const date = new Date(Date.UTC(2026, 0, 1, 22, 59, 59));
-    expect(compute(date)).toBe('@999.99');
+    expect(compute(date)).toBe('@999.98');
   });
 
   it('returns string starting with @', () => {

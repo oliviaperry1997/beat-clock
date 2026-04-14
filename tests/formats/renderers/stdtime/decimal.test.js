@@ -64,10 +64,10 @@ describe('decimal beats standard time renderer', () => {
   });
 
   it('handles fractional offset IST +5.5h correctly', () => {
-    // UTC midnight (0ms) + 5.5h = 19800000ms → 229.17 beats
+    // UTC midnight (0ms) + 5.5h = 19800000ms → 229.16 beats (floored)
     const data = { now: new Date(Date.UTC(2026, 0, 1, 0, 0, 0, 0)) };
     const result = render(data, { meridianOffset: 5.5 });
-    expect(result).toBe('@229.17');
+    expect(result).toBe('@229.16');
   });
 
   // --- Cross-check: decimal renderer at offset +1h must match beats.js at same UTC time ---
@@ -95,9 +95,9 @@ describe('decimal beats standard time renderer', () => {
   });
 
   it('wraps backward across midnight: UTC 01:00 - 3h offset', () => {
-    // 1h - 3h = -2h → wraps to 22h = 79200000ms → 916.67 beats
+    // 1h - 3h = -2h → wraps to 22h = 79200000ms → 916.66 beats (floored)
     const data = { now: new Date(Date.UTC(2026, 0, 1, 1, 0, 0, 0)) };
-    expect(render(data, { meridianOffset: -3 })).toBe('@916.67');
+    expect(render(data, { meridianOffset: -3 })).toBe('@916.66');
   });
 
   // --- Extreme offsets ---

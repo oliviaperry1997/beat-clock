@@ -58,8 +58,8 @@ describe('cross-renderer consistency', () => {
 
     expect(render24h(data, opts)).toBe('01:00');
 
-    // 1h = 3600000ms / 86400 = 41.67 beats
-    expect(renderDecimal(data, opts)).toBe('@041.67');
+    // 1h = 3600000ms / 86400 = 41.66 beats (floored)
+    expect(renderDecimal(data, opts)).toBe('@041.66');
 
     // 1h = 3600000ms / 86400000 * 360 = 15°
     expect(renderLongitudinal(data, opts)).toBe('⌚ 15.00°');
@@ -71,8 +71,8 @@ describe('cross-renderer consistency', () => {
 
     expect(render24h(data, opts)).toBe('22:00');
 
-    // 22h = 79200000ms / 86400 = 916.67 beats
-    expect(renderDecimal(data, opts)).toBe('@916.67');
+    // 22h = 79200000ms / 86400 = 916.66 beats (floored)
+    expect(renderDecimal(data, opts)).toBe('@916.66');
 
     // 22h = 79200000ms / 86400000 * 360 = 330°
     expect(renderLongitudinal(data, opts)).toBe('⌚ 330.00°');
@@ -196,8 +196,7 @@ describe('extreme meridian offsets', () => {
         const numStr = result.slice(2, -1);
         const deg = parseFloat(numStr);
         expect(deg).toBeGreaterThanOrEqual(0);
-        // 360.00 is possible via toFixed(2) rounding at 23:59:59 UTC offset 0
-        expect(deg).toBeLessThanOrEqual(360);
+        expect(deg).toBeLessThan(360);
       }
     }
   });

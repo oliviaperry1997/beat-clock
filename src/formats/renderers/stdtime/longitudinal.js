@@ -17,7 +17,7 @@
  * Symbol: ⧖ (U+29D6 WHITE HOURGLASS) — NOT ☉ (U+2609 SUN), which is reserved for solar/date renderers.
  * Format: ⧖ NNN.NN° — e.g. '⧖ 0.00°', '⧖ 180.00°', '⧖ 270.25°'
  *
- * Precision: 2 decimal places. Range: [0.00°, 360.00°) — never reaches 360.00° exactly.
+ * Precision: 2 decimal places, floored (not rounded). Range: [0.00°, 359.99°].
  *
  * Error fallback: '⧖ ???°' when data is null/undefined.
  *
@@ -47,7 +47,8 @@ export function render(data, opts = {}) {
     // Double-modulo: handles both positive and negative offsets
     const adjustedMs = ((msOfDay + meridianOffsetMs) % 86400000 + 86400000) % 86400000;
 
-    const degrees = adjustedMs / 86400000 * 360;
+    // Floor to nearest hundredth to prevent rounding up to 360.00° near midnight
+    const degrees = Math.floor(adjustedMs / 86400000 * 360 * 100) / 100;
     return `\u29D6 ${degrees.toFixed(2)}\u00B0`;
   } catch (_) {
     return '\u29D6 ???\u00B0';

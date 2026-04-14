@@ -44,7 +44,8 @@ export function render(data, opts = {}) {
     // JavaScript % can return negative values for negative operands
     const adjustedMs = ((msOfDay + meridianOffsetMs) % 86400000 + 86400000) % 86400000;
 
-    const beats = adjustedMs / 86400;
+    // Floor to nearest hundredth to prevent rounding up to @1000.00 near midnight
+    const beats = Math.floor(adjustedMs / 86400 * 100) / 100;
     return `@${beats.toFixed(2).padStart(6, '0')}`;
   } catch (_) {
     return '@???';
