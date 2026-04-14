@@ -14,13 +14,24 @@ const SCHEMA_VERSION = 1;
  */
 const DEFAULT_CONFIG = Object.freeze({
   version: 1,
-  components: {
+  components: Object.freeze({
     year: 'holocene',
     date: 'gregorian',
     stdTime: '24h',
     solarTime: 'descriptive',
-  },
+  }),
 });
+
+/**
+ * Create a deep copy of the default config.
+ * @returns {object}
+ */
+function cloneDefaults() {
+  return {
+    version: DEFAULT_CONFIG.version,
+    components: { ...DEFAULT_CONFIG.components },
+  };
+}
 
 /**
  * Load format configuration from localStorage.
@@ -30,13 +41,13 @@ const DEFAULT_CONFIG = Object.freeze({
 export function loadFormatConfig() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { ...DEFAULT_CONFIG };
+    if (!raw) return cloneDefaults();
 
     const config = JSON.parse(raw);
-    if (!config || typeof config !== 'object') return { ...DEFAULT_CONFIG };
+    if (!config || typeof config !== 'object') return cloneDefaults();
     if (config.version !== SCHEMA_VERSION) {
       console.warn('Format config schema version mismatch, using defaults');
-      return { ...DEFAULT_CONFIG };
+      return cloneDefaults();
     }
 
     // Ensure components key exists (defensive for partial saves)
@@ -47,7 +58,7 @@ export function loadFormatConfig() {
     return config;
   } catch (e) {
     console.warn('Failed to load format config, using defaults');
-    return { ...DEFAULT_CONFIG };
+    return cloneDefaults();
   }
 }
 
