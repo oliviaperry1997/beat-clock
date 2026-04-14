@@ -53,50 +53,63 @@ export function lerpColor(colorA, colorB, t) {
 }
 
 function getSkyPhase(date, times) {
-  const { sunrise, sunset, civilDawn, civilDusk, nauticalDawn, nauticalDusk } = times;
+  const { sunrise, sunset, dawn, dusk, nauticalDawn, nauticalDusk } = times;
 
   // If any required times are invalid, default to deep-night
-  if (!sunrise || !sunset || !civilDawn || !civilDusk || !nauticalDawn || !nauticalDusk) {
+  if (!sunrise || !sunset || !dawn || !dusk || !nauticalDawn || !nauticalDusk) {
     return { phase: 'deep-night', progress: 0 };
   }
 
   // Determine current phase based on time boundaries
-  if (date >= civilDusk && date < nauticalDusk) {
-    const start = civilDusk.getTime();
+  // dusk → nauticalDusk: civil twilight (dusk)
+  if (date >= dusk && date < nauticalDusk) {
+    const start = dusk.getTime();
     const end = nauticalDusk.getTime();
     return { phase: 'civil-dawn-dusk', progress: (date.getTime() - start) / (end - start) };
   }
-  if (date >= nauticalDusk && date < nauticalDawn) {
+  // nauticalDusk → night: deep night start
+  if (date >= nauticalDusk && date < times.night) {
     const start = nauticalDusk.getTime();
+    const end = times.night.getTime();
+    return { phase: 'astronomical-twilight', progress: (date.getTime() - start) / (end - start) };
+  }
+  // night → nauticalDawn: deep night
+  if (date >= times.night && date < nauticalDawn) {
+    const start = times.night.getTime();
     const end = nauticalDawn.getTime();
     return { phase: 'deep-night', progress: (date.getTime() - start) / (end - start) };
   }
-  if (date >= nauticalDawn && date < civilDawn) {
+  // nauticalDawn → dawn: astronomical twilight
+  if (date >= nauticalDawn && date < dawn) {
     const start = nauticalDawn.getTime();
-    const end = civilDawn.getTime();
+    const end = dawn.getTime();
     return { phase: 'astronomical-twilight', progress: (date.getTime() - start) / (end - start) };
   }
-  if (date >= civilDawn && date < sunrise) {
-    const start = civilDawn.getTime();
+  // dawn → sunrise: civil twilight (dawn)
+  if (date >= dawn && date < sunrise) {
+    const start = dawn.getTime();
     const end = sunrise.getTime();
     return { phase: 'civil-dawn-dusk', progress: (date.getTime() - start) / (end - start) };
   }
+  // sunrise → goldenHourEnd: golden hour morning
   if (date >= sunrise && date < times.goldenHourEnd) {
     const start = sunrise.getTime();
     const end = times.goldenHourEnd.getTime();
     return { phase: 'golden-hour', progress: (date.getTime() - start) / (end - start) };
   }
+  // goldenHourEnd → goldenHour: full day
   if (date >= times.goldenHourEnd && date < times.goldenHour) {
     const start = times.goldenHourEnd.getTime();
     const end = times.goldenHour.getTime();
     return { phase: 'day', progress: (date.getTime() - start) / (end - start) };
   }
+  // goldenHour → sunset: golden hour evening
   if (date >= times.goldenHour && date < sunset) {
     const start = times.goldenHour.getTime();
     const end = sunset.getTime();
     return { phase: 'golden-hour', progress: (date.getTime() - start) / (end - start) };
   }
-  // Default: deep night (after sunset, before civil dusk)
+  // Default: deep night (after sunset, before dusk)
   return { phase: 'deep-night', progress: 0 };
 }
 
