@@ -18,7 +18,7 @@ Requirements for Modular Datetime Formats milestone. Each maps to roadmap phases
 
 - [ ] **DATE-01**: User can display date in Gregorian format (standard month/day)
 - [ ] **DATE-02**: User can display date in Chinese lunisolar format (Chinese month/day with leap month notation)
-- [ ] **DATE-03**: User can display date in Longitudinal format (Solar Longitude 0-360° from Point of Aries + Lunar Phase Angle 0-360° from New Moon)
+- [x] **DATE-03**: User can display date in Longitudinal format (Solar Longitude 0-360° from Point of Aries + Lunar Phase Angle 0-360° from New Moon)
 - [ ] **DATE-04**: Year boundary transitions correctly when Date format changes (e.g., Chinese New Year vs Jan 1 vs Meghalayan epoch) — note: Year format is independently selected but boundary behavior must be consistent
 
 ### Standard Time Format
@@ -31,9 +31,9 @@ Requirements for Modular Datetime Formats milestone. Each maps to roadmap phases
 
 ### Solar Time Format
 
-- [ ] **SOLTIME-01**: User can display Solar Time in 24h local format (based on user's location sun position)
-- [ ] **SOLTIME-02**: User can display Solar Time in Decimal format (local solar beats)
-- [ ] **SOLTIME-03**: User can display Solar Time in Longitudinal format (solar angle-based time at chosen longitude — differs from Standard Time longitudinal by using actual sun position, not fixed meridian offset)
+- [x] **SOLTIME-01**: User can display Solar Time in 24h local format (based on user's location sun position)
+- [x] **SOLTIME-02**: User can display Solar Time in Decimal format (local solar beats)
+- [x] **SOLTIME-03**: User can display Solar Time in Longitudinal format (solar angle-based time at chosen longitude — differs from Standard Time longitudinal by using actual sun position, not fixed meridian offset)
 - [ ] **SOLTIME-04**: User can display Solar Time in Descriptive format (time-of-day descriptions: golden hour, blue hour, civil twilight, nautical twilight, astronomical twilight, deep night, solar noon, day, etc.)
 
 ### Format System
@@ -89,16 +89,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | YEAR-04 | Phase 11 | Pending |
 | DATE-01 | Phase 11 | Pending |
 | DATE-02 | Phase 11 | Pending |
-| DATE-03 | Phase 11 | Pending |
+| DATE-03 | Phase 11 | Complete |
 | DATE-04 | Phase 11 | Pending |
 | STDTIME-01 | Phase 12 | Pending |
 | STDTIME-02 | Phase 12 | Pending |
 | STDTIME-03 | Phase 12 | Pending |
 | STDTIME-04 | Phase 12 | Pending |
 | STDTIME-05 | Phase 12 | Pending |
-| SOLTIME-01 | Phase 13 | Pending |
-| SOLTIME-02 | Phase 13 | Pending |
-| SOLTIME-03 | Phase 13 | Pending |
+| SOLTIME-01 | Phase 13 | Complete |
+| SOLTIME-02 | Phase 13 | Complete |
+| SOLTIME-03 | Phase 13 | Complete |
 | SOLTIME-04 | Phase 13 | Pending |
 | FORMAT-01 | Phase 14 | Pending |
 | FORMAT-02 | Phase 10 | Pending |
