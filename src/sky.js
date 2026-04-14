@@ -53,63 +53,59 @@ export function lerpColor(colorA, colorB, t) {
 }
 
 function getSkyPhase(date, times) {
-  const { sunrise, sunset, dawn, dusk, nauticalDawn, nauticalDusk } = times;
+  const { sunrise, sunset, dawn, dusk, nauticalDawn, nauticalDusk, goldenHour, goldenHourEnd } = times;
 
   // If any required times are invalid, default to deep-night
   if (!sunrise || !sunset || !dawn || !dusk || !nauticalDawn || !nauticalDusk) {
     return { phase: 'deep-night', progress: 0 };
   }
 
-  // Determine current phase based on time boundaries
-  // dusk → nauticalDusk: civil twilight (dusk)
-  if (date >= dusk && date < nauticalDusk) {
-    const start = dusk.getTime();
-    const end = nauticalDusk.getTime();
-    return { phase: 'civil-dawn-dusk', progress: (date.getTime() - start) / (end - start) };
+  const t = date.getTime();
+
+  // Suncalc returns times for the calendar date at the given location.
+  // Evening events (goldenHour, sunset, etc.) may be on the next UTC day.
+  // Morning events (nauticalDawn, dawn, etc.) are on the current UTC day.
+  // When current UTC time is between these two groups, we're in the
+  // "post-midnight, pre-dawn" window and should use today's morning events.
+  // When current UTC time is after morning events but before evening events,
+  // we're in daytime.
+
+  // Check if current time is in the "day" window: after morning goldenHourEnd
+  // but before evening goldenHour (which may be next UTC day).
+  if (t >= goldenHourEnd.getTime() && t < goldenHour.getTime()) {
+    // Full day phase
+    return { phase: 'day', progress: (t - goldenHourEnd.getTime()) / (goldenHour.getTime() - goldenHourEnd.getTime()) };
   }
-  // nauticalDusk → night: deep night start
-  if (date >= nauticalDusk && date < times.night) {
-    const start = nauticalDusk.getTime();
-    const end = times.night.getTime();
-    return { phase: 'astronomical-twilight', progress: (date.getTime() - start) / (end - start) };
+
+  // Evening phases (goldenHour → sunset → dusk → nauticalDusk → night)
+  if (t >= goldenHour.getTime() && t < sunset.getTime()) {
+    return { phase: 'golden-hour', progress: (t - goldenHour.getTime()) / (sunset.getTime() - goldenHour.getTime()) };
   }
-  // night → nauticalDawn: deep night
-  if (date >= times.night && date < nauticalDawn) {
-    const start = times.night.getTime();
-    const end = nauticalDawn.getTime();
-    return { phase: 'deep-night', progress: (date.getTime() - start) / (end - start) };
+  if (t >= sunset.getTime() && t < dusk.getTime()) {
+    return { phase: 'civil-dawn-dusk', progress: (t - sunset.getTime()) / (dusk.getTime() - sunset.getTime()) };
   }
-  // nauticalDawn → dawn: astronomical twilight
-  if (date >= nauticalDawn && date < dawn) {
-    const start = nauticalDawn.getTime();
-    const end = dawn.getTime();
-    return { phase: 'astronomical-twilight', progress: (date.getTime() - start) / (end - start) };
+  if (t >= dusk.getTime() && t < nauticalDusk.getTime()) {
+    return { phase: 'astronomical-twilight', progress: (t - dusk.getTime()) / (nauticalDusk.getTime() - dusk.getTime()) };
   }
-  // dawn → sunrise: civil twilight (dawn)
-  if (date >= dawn && date < sunrise) {
-    const start = dawn.getTime();
-    const end = sunrise.getTime();
-    return { phase: 'civil-dawn-dusk', progress: (date.getTime() - start) / (end - start) };
+  if (t >= nauticalDusk.getTime() && t < times.night.getTime()) {
+    return { phase: 'deep-night', progress: (t - nauticalDusk.getTime()) / (times.night.getTime() - nauticalDusk.getTime()) };
   }
-  // sunrise → goldenHourEnd: golden hour morning
-  if (date >= sunrise && date < times.goldenHourEnd) {
-    const start = sunrise.getTime();
-    const end = times.goldenHourEnd.getTime();
-    return { phase: 'golden-hour', progress: (date.getTime() - start) / (end - start) };
+
+  // Night phases (night → nauticalDawn → dawn → sunrise → goldenHourEnd)
+  if (t >= times.night.getTime() && t < nauticalDawn.getTime()) {
+    return { phase: 'deep-night', progress: (t - times.night.getTime()) / (nauticalDawn.getTime() - times.night.getTime()) };
   }
-  // goldenHourEnd → goldenHour: full day
-  if (date >= times.goldenHourEnd && date < times.goldenHour) {
-    const start = times.goldenHourEnd.getTime();
-    const end = times.goldenHour.getTime();
-    return { phase: 'day', progress: (date.getTime() - start) / (end - start) };
+  if (t >= nauticalDawn.getTime() && t < dawn.getTime()) {
+    return { phase: 'astronomical-twilight', progress: (t - nauticalDawn.getTime()) / (dawn.getTime() - nauticalDawn.getTime()) };
   }
-  // goldenHour → sunset: golden hour evening
-  if (date >= times.goldenHour && date < sunset) {
-    const start = times.goldenHour.getTime();
-    const end = sunset.getTime();
-    return { phase: 'golden-hour', progress: (date.getTime() - start) / (end - start) };
+  if (t >= dawn.getTime() && t < sunrise.getTime()) {
+    return { phase: 'civil-dawn-dusk', progress: (t - dawn.getTime()) / (sunrise.getTime() - dawn.getTime()) };
   }
-  // Default: deep night (after sunset, before dusk)
+  if (t >= sunrise.getTime() && t < goldenHourEnd.getTime()) {
+    return { phase: 'golden-hour', progress: (t - sunrise.getTime()) / (goldenHourEnd.getTime() - sunrise.getTime()) };
+  }
+
+  // Default: deep night (before yesterday's evening events, or after tonight's night)
   return { phase: 'deep-night', progress: 0 };
 }
 
@@ -124,7 +120,30 @@ export function getSkyGradientColors(date, latitude, longitude) {
   }
 
   const times = SunCalc.getTimes(date, latitude, longitude);
-  const { phase, progress } = getSkyPhase(date, times);
+
+  // Suncalc returns events for the calendar date at the location.
+  // Evening events (goldenHour, sunset...) may land on the next UTC day.
+  // If current time is before morning events, use yesterday's evening events.
+  let eveningTimes = times;
+  if (times.nauticalDawn && date < times.nauticalDawn) {
+    const yesterday = new Date(date.getTime() - 86400000);
+    eveningTimes = SunCalc.getTimes(yesterday, latitude, longitude);
+  }
+
+  // Merge: evening events from yesterday (if applicable), morning events from today
+  const phaseTimes = {
+    goldenHour: eveningTimes.goldenHour,
+    sunset: eveningTimes.sunset,
+    dusk: eveningTimes.dusk,
+    nauticalDusk: eveningTimes.nauticalDusk,
+    night: eveningTimes.night,
+    nauticalDawn: times.nauticalDawn,
+    dawn: times.dawn,
+    sunrise: times.sunrise,
+    goldenHourEnd: times.goldenHourEnd,
+  };
+
+  const { phase, progress } = getSkyPhase(date, phaseTimes);
 
   // Clamp progress to 0-1
   const t = Math.max(0, Math.min(1, progress || 0));
