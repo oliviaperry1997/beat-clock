@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:openrouter.ai)",
+      "Skill(claude-api)",
+      "Bash(npm install:*)"
+    ]
+  }
+}
