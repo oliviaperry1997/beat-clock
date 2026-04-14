@@ -17,6 +17,10 @@ const activeAlarms = new Map();
 // This enables transition-based firing (only fires when crossing from false → true)
 const previousTriggerState = new Map();
 
+// Tracks which alarms have been evaluated at least once
+// Prevents firing on page load for alarms that are already triggered
+const hasEvaluatedBefore = new Map();
+
 // Dismiss callback — set by UI or engine consumers
 let dismissCallback = null;
 
@@ -47,8 +51,17 @@ export function initAlarmEngine(location, tickRateMs = 864) {
 
     for (const alarm of alarms) {
       const { triggered } = evaluateAlarm(alarm, now, loc.latitude, loc.longitude);
+      const isFirstEval = !hasEvaluatedBefore.has(alarm.id);
       const wasTriggered = previousTriggerState.get(alarm.id) || false;
       const isActive = activeAlarms.has(alarm.id);
+
+      if (isFirstEval) {
+        // First time seeing this alarm on this page load — just record state, don't fire.
+        // This prevents alarms from triggering on reload when they're already past the target.
+        hasEvaluatedBefore.set(alarm.id, true);
+        previousTriggerState.set(alarm.id, triggered);
+        continue;
+      }
 
       if (triggered && !wasTriggered && !isActive) {
         // TRANSITION: alarm just crossed the threshold → fire notifications
@@ -123,6 +136,7 @@ export function initAlarmEngine(location, tickRateMs = 864) {
     stop: () => {
       clearInterval(intervalId);
       previousTriggerState.clear();
+      hasEvaluatedBefore.clear();
     },
     evaluateNow: () => tick(location),
     getActiveAlarms: () => {
@@ -147,6 +161,7 @@ export function initAlarmEngine(location, tickRateMs = 864) {
 export function resetActiveAlarms() {
   activeAlarms.clear();
   previousTriggerState.clear();
+  hasEvaluatedBefore.clear();
 }
 
 /**
@@ -163,9 +178,18 @@ export function handleMissedAlarms() {
 
   for (const alarm of alarms) {
     const { triggered } = evaluateAlarm(alarm, now, location.latitude, location.longitude);
+    const isFirstEval = !hasEvaluatedBefore.has(alarm.id);
+
+    if (isFirstEval) {
+      // First evaluation after page load — just record state
+      hasEvaluatedBefore.set(alarm.id, true);
+      previousTriggerState.set(alarm.id, triggered);
+      continue;
+    }
+
     const wasTriggered = previousTriggerState.get(alarm.id) || false;
 
-    // Only fire if crossing the threshold (not if already triggered before tab was hidden)
+    // Only fire if crossing the threshold (wasn't triggered before, now it is)
     if (triggered && !wasTriggered && !activeAlarms.has(alarm.id)) {
       fireNotifications(alarm);
       activeAlarms.set(alarm.id, {

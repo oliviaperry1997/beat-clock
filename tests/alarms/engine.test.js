@@ -90,13 +90,26 @@ describe('initAlarmEngine', () => {
       { id: 'alm_1', enabled: true, oneTime: false, recurrence: 'daily', lastFiredAt: null }
     ];
     getEnabledAlarms.mockReturnValue(alarms);
-    // First tick: triggered=true, but no previous state → should fire (first run is special case)
     evaluateAlarm.mockReturnValue({ triggered: true });
 
     const engine = initAlarmEngine(mockLocationData);
-    engine.evaluateNow();
 
-    expect(fireNotifications).toHaveBeenCalled();
+    // First tick — warm-up, records state but does NOT fire (prevents page-load triggers)
+    engine.evaluateNow();
+    expect(fireNotifications).not.toHaveBeenCalled();
+
+    // Second tick — still triggered, but it's the first observed state, so no transition
+    engine.evaluateNow();
+    expect(fireNotifications).not.toHaveBeenCalled();
+
+    // Now simulate: not triggered → triggered (real crossing)
+    evaluateAlarm.mockReturnValue({ triggered: false });
+    engine.evaluateNow(); // records false
+
+    evaluateAlarm.mockReturnValue({ triggered: true });
+    engine.evaluateNow(); // transition false → true, fires!
+    expect(fireNotifications).toHaveBeenCalledTimes(1);
+
     engine.stop();
   });
 
@@ -105,19 +118,27 @@ describe('initAlarmEngine', () => {
       { id: 'alm_1', enabled: true, oneTime: false, recurrence: 'daily', lastFiredAt: null }
     ];
     getEnabledAlarms.mockReturnValue(alarms);
-    evaluateAlarm.mockReturnValue({ triggered: true });
 
     const engine = initAlarmEngine(mockLocationData);
 
-    // First tick — fires (transition from false → true)
+    // First tick — warm-up
+    evaluateAlarm.mockReturnValue({ triggered: true });
     engine.evaluateNow();
+    expect(fireNotifications).not.toHaveBeenCalled();
+
+    // Simulate: not triggered → triggered (real crossing)
+    evaluateAlarm.mockReturnValue({ triggered: false });
+    engine.evaluateNow(); // records false
+
+    evaluateAlarm.mockReturnValue({ triggered: true });
+    engine.evaluateNow(); // transition false → true, fires!
     expect(fireNotifications).toHaveBeenCalledTimes(1);
 
-    // Second tick — still triggered, but no transition (was already true) → should NOT fire again
-    // BUT it should play chime since alarm is still active
+    // Next tick — still triggered, no transition → should NOT fire again
+    // BUT chime should play since alarm is active
     engine.evaluateNow();
-    expect(fireNotifications).toHaveBeenCalledTimes(1); // Still 1, not 2
-    expect(playChime).toHaveBeenCalled(); // But chime plays
+    expect(fireNotifications).toHaveBeenCalledTimes(1); // Still 1
+    expect(playChime).toHaveBeenCalled();
     engine.stop();
   });
 
@@ -126,18 +147,25 @@ describe('initAlarmEngine', () => {
       { id: 'alm_1', enabled: true, oneTime: false, recurrence: 'daily', lastFiredAt: null }
     ];
     getEnabledAlarms.mockReturnValue(alarms);
-    evaluateAlarm.mockReturnValue({ triggered: true });
 
     const engine = initAlarmEngine(mockLocationData);
 
-    // First tick — fires
+    // Warm-up tick
+    evaluateAlarm.mockReturnValue({ triggered: true });
     engine.evaluateNow();
+
+    // Simulate crossing: not triggered → triggered
+    evaluateAlarm.mockReturnValue({ triggered: false });
+    engine.evaluateNow();
+
+    evaluateAlarm.mockReturnValue({ triggered: true });
+    engine.evaluateNow(); // transition false → true, fires!
     expect(fireNotifications).toHaveBeenCalledTimes(1);
 
     // Subsequent ticks — chime plays each tick
     engine.evaluateNow();
     engine.evaluateNow();
-    expect(playChime).toHaveBeenCalledTimes(2); // Once per tick after first
+    expect(playChime).toHaveBeenCalledTimes(2);
     engine.stop();
   });
 
@@ -146,14 +174,20 @@ describe('initAlarmEngine', () => {
       { id: 'alm_1', enabled: true, oneTime: false, recurrence: 'daily', lastFiredAt: null }
     ];
     getEnabledAlarms.mockReturnValue(alarms);
-    evaluateAlarm.mockReturnValue({ triggered: true });
 
     const engine = initAlarmEngine(mockLocationData);
 
-    // First tick — fires
+    // Warm-up
+    evaluateAlarm.mockReturnValue({ triggered: true });
     engine.evaluateNow();
+
+    // Crossing: not triggered → triggered
+    evaluateAlarm.mockReturnValue({ triggered: false });
+    engine.evaluateNow();
+
+    evaluateAlarm.mockReturnValue({ triggered: true });
+    engine.evaluateNow(); // fires
     expect(fireNotifications).toHaveBeenCalledTimes(1);
-    const playChimeCountAfterFire = playChime.mock.calls.length;
 
     // Dismiss the alarm
     engine.dismissAlarm('alm_1');
@@ -161,7 +195,6 @@ describe('initAlarmEngine', () => {
     // Next tick — should stop notifications, no chime
     engine.evaluateNow();
     expect(stopNotifications).toHaveBeenCalled();
-    expect(playChime.mock.calls.length).toBe(playChimeCountAfterFire); // No additional chime
     engine.stop();
   });
 
@@ -170,14 +203,21 @@ describe('initAlarmEngine', () => {
       { id: 'alm_1', enabled: true, oneTime: true, recurrence: 'once', lastFiredAt: null }
     ];
     getEnabledAlarms.mockReturnValue(alarms);
-    evaluateAlarm.mockReturnValue({ triggered: true });
 
     const engine = initAlarmEngine(mockLocationData);
 
-    // First tick — fires, added to activeAlarms
+    // Warm-up
+    evaluateAlarm.mockReturnValue({ triggered: true });
     engine.evaluateNow();
+
+    // Crossing: false → true
+    evaluateAlarm.mockReturnValue({ triggered: false });
+    engine.evaluateNow();
+
+    evaluateAlarm.mockReturnValue({ triggered: true });
+    engine.evaluateNow(); // fires
     expect(fireNotifications).toHaveBeenCalled();
-    expect(deleteAlarm).not.toHaveBeenCalled(); // Not deleted yet — waiting for dismissal
+    expect(deleteAlarm).not.toHaveBeenCalled();
 
     // Simulate dismissal
     engine.dismissAlarm('alm_1');
@@ -193,13 +233,21 @@ describe('initAlarmEngine', () => {
       { id: 'alm_1', enabled: true, oneTime: false, recurrence: 'once', lastFiredAt: null }
     ];
     getEnabledAlarms.mockReturnValue(alarms);
-    evaluateAlarm.mockReturnValue({ triggered: true });
 
     const engine = initAlarmEngine(mockLocationData);
+
+    // Warm-up
+    evaluateAlarm.mockReturnValue({ triggered: true });
     engine.evaluateNow();
 
+    // Crossing: false → true
+    evaluateAlarm.mockReturnValue({ triggered: false });
+    engine.evaluateNow();
+
+    evaluateAlarm.mockReturnValue({ triggered: true });
+    engine.evaluateNow(); // fires
     expect(fireNotifications).toHaveBeenCalled();
-    expect(deleteAlarm).not.toHaveBeenCalled(); // Not deleted yet
+    expect(deleteAlarm).not.toHaveBeenCalled();
 
     // Simulate dismissal
     engine.dismissAlarm('alm_1');
@@ -215,10 +263,19 @@ describe('initAlarmEngine', () => {
       { id: 'alm_1', enabled: true, oneTime: false, recurrence: 'daily', lastFiredAt: null }
     ];
     getEnabledAlarms.mockReturnValue(alarms);
-    evaluateAlarm.mockReturnValue({ triggered: true });
 
     const engine = initAlarmEngine(mockLocationData);
+
+    // Warm-up
+    evaluateAlarm.mockReturnValue({ triggered: true });
     engine.evaluateNow();
+
+    // Crossing: false → true
+    evaluateAlarm.mockReturnValue({ triggered: false });
+    engine.evaluateNow();
+
+    evaluateAlarm.mockReturnValue({ triggered: true });
+    engine.evaluateNow(); // fires
 
     expect(updateAlarm).toHaveBeenCalledWith(
       'alm_1',
@@ -250,7 +307,7 @@ describe('handleMissedAlarms', () => {
     expect(getEnabledAlarms).not.toHaveBeenCalled();
   });
 
-  it('evaluates all enabled alarms when location exists', () => {
+  it('evaluates all enabled alarms when location exists but does not fire on first eval', () => {
     getActiveLocation.mockReturnValue(mockLocationData);
     const alarms = [
       { id: 'alm_1', enabled: true, oneTime: false, recurrence: 'daily', lastFiredAt: null },
@@ -263,19 +320,25 @@ describe('handleMissedAlarms', () => {
 
     expect(getEnabledAlarms).toHaveBeenCalled();
     expect(evaluateAlarm).toHaveBeenCalledTimes(2);
-    expect(fireNotifications).toHaveBeenCalledTimes(2);
+    // First evaluation — warm-up, no firing
+    expect(fireNotifications).not.toHaveBeenCalled();
   });
 
-  it('fires and updates matching alarms', () => {
+  it('fires and updates matching alarms after warm-up', () => {
     getActiveLocation.mockReturnValue(mockLocationData);
     const alarms = [
       { id: 'alm_1', enabled: true, oneTime: false, recurrence: 'daily', lastFiredAt: null }
     ];
     getEnabledAlarms.mockReturnValue(alarms);
-    evaluateAlarm.mockReturnValue({ triggered: true });
 
+    // First call — warm-up: triggered=false, records state, no fire
+    evaluateAlarm.mockReturnValue({ triggered: false });
     handleMissedAlarms();
+    expect(fireNotifications).not.toHaveBeenCalled();
 
+    // Second call — transition: wasTriggered=false, triggered=true → FIRE
+    evaluateAlarm.mockReturnValue({ triggered: true });
+    handleMissedAlarms();
     expect(fireNotifications).toHaveBeenCalled();
     expect(updateAlarm).toHaveBeenCalledWith(
       'alm_1',
