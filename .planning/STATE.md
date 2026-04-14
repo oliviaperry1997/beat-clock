@@ -20,13 +20,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-14)
 
 **Core value:** Make the invisible rhythms of time — lunar cycles, solar arcs, alternative calendars — tangible and beautiful in everyday use.
-**Current focus:** Phase 11 — Year & Date Format Renderers
+**Current focus:** Phase 12 — Standard Time Format Renderers
 
 ## Project State
 
 **Milestone:** v1.0 (Modular Datetime Formats)
 **Current Phase:** 12
-**Last Action:** Milestone v1.0 started — defining requirements
+**Last Action:** Phase 11 (Year & Date Format Renderers) complete — 9/9 plans, 7 renderers, 430 tests passing
 **Date:** 2026-04-14
 
 ## Milestone v0 Summary
@@ -48,12 +48,16 @@ Remaining v0 phases (Cross-Platform Packaging, Polish & Verification) deferred t
 
 - Vanilla JavaScript, Webpack 5, Vitest
 - Dependencies: `suncalc`, `astronomia`, `fuse.js`, `worldcities`, `lunar-javascript`
-- `src/chronometers/` — 7 module files with composer pattern
+- `src/chronometers/` — 12 module files with composer pattern (+ solarLongitude, lunarPhase, solarTime, meghalayan, customEpoch)
+- `src/formats/` — Format config, registry, defaults, and renderer directory
+- `src/formats/renderers/year/` — 4 year renderers: holocene.js, gregorian.js, meghalayan.js, custom.js
+- `src/formats/renderers/date/` — 3 date renderers: gregorian.js, chinese.js, longitudinal.js
 - `src/alarms/` — 7 alarm modules
 - `src/location/` — 5 location modules
 - `src/converters/` — datetime converter modules
 - `src/sky.js` — sky gradient system
-- `src/index.js` — 33 lines, DOM + bootstrap only
+- `src/index.js` — DOM + bootstrap
+- 430 tests passing (37 test files)
 
 **Key patterns:**
 
