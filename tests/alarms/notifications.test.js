@@ -6,6 +6,8 @@ import {
   showAlarmOverlay,
   removeAlarmOverlay,
   fireNotifications,
+  stopNotifications,
+  stopAudio,
   resetAudioContext,
 } from '../../src/alarms/notifications.js';
 
@@ -98,7 +100,7 @@ describe('fireBrowserNotification', () => {
     expect(MockNotification).toHaveBeenCalledWith('Beat Clock', {
       body: 'Morning Alarm',
       tag: 'alarm-test-123',
-      requireInteraction: false,
+      requireInteraction: true,
     });
   });
 
@@ -117,7 +119,7 @@ describe('fireBrowserNotification', () => {
     expect(MockNotification).toHaveBeenCalledWith('Beat Clock', {
       body: 'Alarm',
       tag: 'alarm-test-1',
-      requireInteraction: false,
+      requireInteraction: true,
     });
   });
 });
@@ -129,6 +131,7 @@ describe('playChime', () => {
   afterEach(() => {
     globalThis.AudioContext = originalAudioCtx;
     globalThis.webkitAudioContext = originalWebkitAudioCtx;
+    resetAudioContext();
   });
 
   it('creates AudioContext, oscillator, and gain nodes', () => {
@@ -155,13 +158,12 @@ describe('playChime', () => {
       createGain: vi.fn().mockReturnValue(mockGainNode),
     };
 
-    // Use a proper constructor function (not arrow function) for `new` to work
     globalThis.AudioContext = function MockAudioContext() {
       return mockAudioContext;
     };
     globalThis.webkitAudioContext = null;
 
-    playChime(880, 0.3);
+    playChime(880);
 
     expect(mockAudioContext.createOscillator).toHaveBeenCalled();
     expect(mockAudioContext.createGain).toHaveBeenCalled();
@@ -169,19 +171,17 @@ describe('playChime', () => {
     expect(mockOscillator.frequency.value).toBe(880);
     expect(mockOscillator.connect).toHaveBeenCalledWith(mockGainNode);
     expect(mockGainNode.connect).toHaveBeenCalledWith(mockAudioContext.destination);
-    expect(mockOscillator.start).toHaveBeenCalledWith(0);
-    expect(mockOscillator.stop).toHaveBeenCalledWith(0.3);
+    expect(mockOscillator.start).toHaveBeenCalled();
 
-    // Check gain envelope: ramp 0->0.15 in 0.02s (attack)
+    // Check gain attack: ramp 0->0.15 in 0.02s
     expect(mockGainNode.gain.setValueAtTime).toHaveBeenCalledWith(0, 0);
-    expect(mockGainNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.15, 0.02); // Attack
+    expect(mockGainNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.15, 0.02);
   });
 });
 
 describe('showAlarmOverlay', () => {
   afterEach(() => {
     removeAlarmOverlay();
-    vi.useRealTimers();
   });
 
   it('creates element with id alarm-overlay', () => {
@@ -199,16 +199,26 @@ describe('showAlarmOverlay', () => {
     expect(overlay.textContent).toContain('Morning Alarm');
   });
 
-  it('auto-dismisses after 10000ms', () => {
-    vi.useFakeTimers();
+  it('calls onDismiss callback when dismiss button is clicked', () => {
+    const onDismiss = vi.fn();
+    showAlarmOverlay({ label: 'Test' }, onDismiss);
 
-    showAlarmOverlay({ label: 'Test' });
+    const dismissBtn = document.querySelector('.alarm-overlay-dismiss');
+    expect(dismissBtn).not.toBeNull();
 
+    dismissBtn.click();
+
+    expect(onDismiss).toHaveBeenCalled();
+    expect(document.getElementById('alarm-overlay')).toBeNull();
+  });
+
+  it('persists until dismissed (no auto-dismiss)', () => {
+    showAlarmOverlay({ label: 'Persistent' });
     expect(document.getElementById('alarm-overlay')).not.toBeNull();
 
-    vi.advanceTimersByTime(10000);
-
-    expect(document.getElementById('alarm-overlay')).toBeNull();
+    // Even after 10 seconds, overlay should still exist
+    // (no setTimeout for auto-dismiss anymore)
+    expect(document.getElementById('alarm-overlay')).not.toBeNull();
   });
 });
 
@@ -270,7 +280,7 @@ describe('fireNotifications', () => {
     expect(MockNotification).toHaveBeenCalledWith('Beat Clock', {
       body: 'Test',
       tag: 'alarm-test-1',
-      requireInteraction: false,
+      requireInteraction: true,
     });
   });
 

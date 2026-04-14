@@ -1,7 +1,11 @@
 /**
- * Alarm condition evaluator.
- * Determines whether an alarm should fire on a given tick.
- * Evaluates primary conditions, date filters, recurrence, and deduplication.
+ * Alarm condition evaluator — state-based model.
+ *
+ * Instead of checking "within a tolerance window", the evaluator returns:
+ *   - { triggered: false } — target not yet reached
+ *   - { triggered: true } — target has been reached, alarm should fire
+ *
+ * The engine keeps the alarm ringing until dismissed or timeout elapses.
  */
 
 import {
@@ -15,97 +19,95 @@ import {
 
 import { compute as computeBeats } from '../chronometers/beats.js';
 
-const ONE_BEAT_MS = 86400; // 86.4 seconds per beat
-const TIME_TOLERANCE = 432; // 0.5 beat tolerance in ms (half of one beat)
-
 /**
- * Evaluate whether an alarm should fire.
+ * Evaluate whether an alarm's target time has been reached.
  * @param {Object} alarm - Alarm object
  * @param {Date} now - Current time
  * @param {number} latitude - Location latitude
  * @param {number} longitude - Location longitude
- * @returns {boolean}
+ * @returns {{ triggered: boolean }}
  */
 export function evaluateAlarm(alarm, now, latitude, longitude) {
   if (!alarm.enabled) {
-    return false;
+    return { triggered: false };
   }
 
   const events = getAstroEvents(now, latitude, longitude);
-  const primaryMatches = evaluateCondition(alarm.condition, now, events);
 
-  if (!primaryMatches) {
-    return false;
+  // Check primary condition
+  const primaryResult = evaluateCondition(alarm.condition, now, events);
+  if (!primaryResult.triggered) {
+    return { triggered: false };
   }
 
   // Date filter (AND gate)
   if (alarm.condition.dateFilter) {
     const filterMatches = evaluateDateFilter(alarm.condition.dateFilter, now, events);
     if (!filterMatches) {
-      return false;
+      return { triggered: false };
     }
   }
 
   // Recurrence check
   const recurrenceMatches = evaluateRecurrence(alarm, now);
   if (!recurrenceMatches) {
-    return false;
+    return { triggered: false };
   }
 
-  // Deduplication
-  const shouldFireNow = shouldFireAlarm(alarm, now);
-  if (!shouldFireNow) {
-    return false;
-  }
-
-  return true;
+  return { triggered: true };
 }
 
 /**
  * Evaluate the primary condition type.
+ * Returns { triggered: boolean } — true once target is reached.
  */
 export function evaluateCondition(condition, now, events) {
   switch (condition.type) {
     case 'beat-time': {
       const beatStr = computeBeats(now);
       const currentBeat = parseFloat(beatStr.replace('@', ''));
-      return Math.abs(currentBeat - condition.params.beat) <= 0.5;
+      const targetBeat = condition.params.beat;
+      // Trigger when current beat has reached or passed the target
+      return { triggered: currentBeat >= targetBeat };
     }
 
     case 'standard-time': {
       const targetTime = new Date(now);
       targetTime.setHours(condition.params.hours, condition.params.minutes, 0, 0);
-      return Math.abs(now.getTime() - targetTime.getTime()) < TIME_TOLERANCE;
+      return { triggered: now.getTime() >= targetTime.getTime() };
     }
 
     case 'astro-offset': {
       const eventTime = events.sun[condition.params.event];
       if (!eventTime || isNaN(eventTime.getTime())) {
-        return false;
+        return { triggered: false };
       }
-      const targetTime = new Date(eventTime.getTime() + condition.params.offsetMinutes * 60000);
-      return Math.abs(now.getTime() - targetTime.getTime()) < TIME_TOLERANCE;
+      const offsetMs = (condition.params.offsetMinutes || 0) * 60000;
+      const targetTime = new Date(eventTime.getTime() + offsetMs);
+      return { triggered: now.getTime() >= targetTime.getTime() };
     }
 
     case 'astro-offset-beats': {
       const eventTime = events.sun[condition.params.event];
       if (!eventTime || isNaN(eventTime.getTime())) {
-        return false;
+        return { triggered: false };
       }
       const eventBeatStr = computeBeats(eventTime);
       const eventBeat = parseFloat(eventBeatStr.replace('@', ''));
-      const targetBeat = eventBeat + condition.params.offsetBeats;
+      const offsetBeats = condition.params.offsetBeats || 0;
+      const targetBeat = eventBeat + offsetBeats;
+      // Convert beat target to time: each beat = 86.4 seconds
       const beatDiff = targetBeat - eventBeat;
       const targetTime = new Date(eventTime.getTime() + beatDiff * 86.4 * 1000);
-      return Math.abs(now.getTime() - targetTime.getTime()) < TIME_TOLERANCE;
+      return { triggered: now.getTime() >= targetTime.getTime() };
     }
 
     case 'date-trigger': {
-      return true;
+      return { triggered: true };
     }
 
     default:
-      return false;
+      return { triggered: false };
   }
 }
 
@@ -185,18 +187,24 @@ export function evaluateRecurrence(alarm, now) {
 }
 
 /**
- * Check if alarm should fire now (deduplication).
- * After firing, blocks re-firing for one full beat cycle (~86.4s)
- * to prevent repetitive triggering.
+ * Check if the alarm has been dismissed.
+ * Returns true if the alarm is NOT dismissed (i.e., should keep ringing).
  */
-export function shouldFireAlarm(alarm, now) {
-  if (!alarm.lastFiredAt) {
-    return true;
+export function isNotDismissed(alarm) {
+  return !alarm.dismissedAt;
+}
+
+/**
+ * Check if the alarm has exceeded its timeout duration.
+ * Returns true if no timeout set or timeout has elapsed.
+ */
+export function isNotTimedOut(alarm, now) {
+  if (!alarm.timeoutDuration) {
+    return true; // No timeout — rings indefinitely
   }
-
-  const lastFiredTime = new Date(alarm.lastFiredAt).getTime();
-  const timeSinceLastFire = now.getTime() - lastFiredTime;
-
-  // Block for one full beat cycle to prevent repetitive ringing
-  return timeSinceLastFire > ONE_BEAT_MS;
+  if (!alarm.lastFiredAt) {
+    return true; // Not yet fired — no timeout check needed
+  }
+  const elapsed = now.getTime() - new Date(alarm.lastFiredAt).getTime();
+  return elapsed > alarm.timeoutDuration;
 }

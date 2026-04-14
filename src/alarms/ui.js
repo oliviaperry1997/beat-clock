@@ -14,6 +14,7 @@ import { getActiveLocation } from '../location/store.js';
 let activeTab = 'list';
 let currentTemplateKey = null;
 let formData = {};
+let onDismissAlarm = null;
 
 /**
  * Generate a human-readable label for an alarm.
@@ -30,14 +31,18 @@ function getAlarmDescription(alarm) {
     case 'astro-offset': {
       const eventLabels = { sunrise: 'sunrise', sunset: 'sunset', solarNoon: 'solar noon' };
       const eventName = eventLabels[c.params.event] || c.params.event;
-      const offset = c.params.offsetMinutes;
-      const dir = offset >= 0 ? 'after' : 'before';
+      const offset = c.params.offsetMinutes || 0;
+      if (offset === 0) return `At ${eventName}`;
+      const dir = offset > 0 ? 'after' : 'before';
       return `${Math.abs(offset)} min ${dir} ${eventName}`;
     }
     case 'astro-offset-beats': {
       const eventLabels = { sunrise: 'sunrise', sunset: 'sunset', solarNoon: 'solar noon' };
       const eventName = eventLabels[c.params.event] || c.params.event;
-      return `${c.params.offsetBeats} beats after ${eventName}`;
+      const offset = c.params.offsetBeats;
+      if (offset === 0 || offset == null) return `At ${eventName}`;
+      const dir = offset > 0 ? 'after' : 'before';
+      return `${Math.abs(offset)} beats ${dir} ${eventName}`;
     }
     case 'date-trigger':
       return c.template || alarm.label;
@@ -50,9 +55,11 @@ function getAlarmDescription(alarm) {
  * Initialize the full alarm system UI.
  *
  * @param {Object} location - Location object with latitude/longitude
+ * @param {function} dismissCallback - Called with alarmId to dismiss active alarm
  * @returns {Object} Cleanup handle with { stop() }
  */
-export function initAlarmSystem(location) {
+export function initAlarmSystem(location, dismissCallback) {
+  onDismissAlarm = dismissCallback;
   createAlarmTrigger(location);
   return {
     stop() {
@@ -298,6 +305,16 @@ function renderParameterForm(templateKey) {
     </div>
   `;
 
+  // Timeout duration (optional)
+  const timeoutMin = formData.timeoutDuration ? Math.floor(formData.timeoutDuration / 60000) : '';
+  html += `
+    <div class="param-field">
+      <label class="param-label">Auto-stop after (minutes, empty = indefinite)</label>
+      <input type="number" class="param-input" data-param="timeoutDuration"
+        min="1" value="${timeoutMin}" placeholder="Indefinite" />
+    </div>
+  `;
+
   // Notification toggles
   html += `
     <div class="notification-toggles">
@@ -447,6 +464,7 @@ function editAlarm(alarmId) {
     _editingId: alarmId,
     recurrence: alarm.recurrence || 'once',
     dateFilter: alarm.condition.dateFilter || null,
+    timeoutDuration: alarm.timeoutDuration || null,
   };
 
   // Populate condition params
@@ -476,12 +494,15 @@ function saveAlarmFromForm(templateKey) {
   const template = getTemplate(templateKey);
   if (!template) return;
 
-  // Collect params
+  // Collect params — default empty numeric fields to 0
   const params = {};
   for (const param of template.params) {
-    const val = formData[param.key];
+    let val = formData[param.key];
     if (val !== undefined && val !== '') {
       params[param.key] = Number(val);
+    } else if (param.type === 'number') {
+      // Empty number fields default to 0
+      params[param.key] = 0;
     }
   }
 
@@ -513,6 +534,12 @@ function saveAlarmFromForm(templateKey) {
       audio: notifAudio
     }
   };
+
+  // Timeout duration (convert minutes to ms)
+  const timeoutMin = formData.timeoutDuration;
+  if (timeoutMin !== undefined && timeoutMin !== '' && Number(timeoutMin) > 0) {
+    alarmData.timeoutDuration = Number(timeoutMin) * 60000;
+  }
 
   if (formData._editingId) {
     // Editing existing alarm

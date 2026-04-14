@@ -1,9 +1,13 @@
 /**
  * Three-channel notification system: Browser Notification API, in-app overlay,
- * and Web Audio API chime. Addresses D-02.
+ * and Web Audio API chime.
+ *
+ * Supports persistent ringing until explicitly dismissed.
  */
 
 let audioCtx = null;
+let activeOscillator = null;
+let activeGain = null;
 
 /**
  * Ensures Notification permission is granted.
@@ -15,7 +19,6 @@ export function ensureNotificationPermission() {
   if (Notification.permission === 'granted') return true;
   if (Notification.permission === 'denied') return false;
 
-  // Must be called from a user gesture
   Notification.requestPermission().then((result) => {
     return result === 'granted';
   });
@@ -32,7 +35,7 @@ export function fireBrowserNotification(alarm) {
   const notification = new Notification('Beat Clock', {
     body: alarm.label || 'Alarm',
     tag: 'alarm-' + alarm.id,
-    requireInteraction: false,
+    requireInteraction: true,
   });
 
   notification.onclick = () => {
@@ -65,11 +68,10 @@ function initAudio() {
 }
 
 /**
- * Plays an audio chime using Web Audio API oscillator.
+ * Starts a continuous audio tone for alarm ringing.
  * @param {number} frequency - Frequency in Hz (default 880).
- * @param {number} duration - Duration in seconds (default 0.3).
  */
-export function playChime(frequency = 880, duration = 0.3) {
+export function playChime(frequency = 880) {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
@@ -77,6 +79,9 @@ export function playChime(frequency = 880, duration = 0.3) {
   if (audioCtx.state === 'suspended') {
     audioCtx.resume();
   }
+
+  // Stop any existing tone first
+  stopAudio();
 
   const oscillator = audioCtx.createOscillator();
   const gainNode = audioCtx.createGain();
@@ -87,22 +92,37 @@ export function playChime(frequency = 880, duration = 0.3) {
   const now = audioCtx.currentTime;
   gainNode.gain.setValueAtTime(0, now);
   gainNode.gain.linearRampToValueAtTime(0.15, now + 0.02); // Attack
-  gainNode.gain.linearRampToValueAtTime(0.15, now + duration - 0.05); // Sustain
-  gainNode.gain.linearRampToValueAtTime(0, now + duration); // Release
 
   oscillator.connect(gainNode);
   gainNode.connect(audioCtx.destination);
 
   oscillator.start(now);
-  oscillator.stop(now + duration);
+  activeOscillator = oscillator;
+  activeGain = gainNode;
+}
+
+/**
+ * Stops the active audio tone.
+ */
+export function stopAudio() {
+  if (activeGain) {
+    const now = audioCtx.currentTime;
+    activeGain.gain.linearRampToValueAtTime(0, now + 0.05);
+  }
+  if (activeOscillator) {
+    activeOscillator.stop(audioCtx.currentTime + 0.06);
+    activeOscillator = null;
+    activeGain = null;
+  }
 }
 
 /**
  * Shows a glassmorphism in-app overlay for the alarm.
- * Auto-dismisses after 10 seconds.
+ * Persists until dismissed.
  * @param {Object} alarm - Alarm object with label.
+ * @param {function} onDismiss - Callback when user dismisses.
  */
-export function showAlarmOverlay(alarm) {
+export function showAlarmOverlay(alarm, onDismiss) {
   // Remove any existing overlay first
   removeAlarmOverlay();
 
@@ -119,12 +139,12 @@ export function showAlarmOverlay(alarm) {
 
   // Dismiss button handler
   const dismissBtn = overlay.querySelector('.alarm-overlay-dismiss');
-  dismissBtn.addEventListener('click', removeAlarmOverlay);
+  dismissBtn.addEventListener('click', () => {
+    removeAlarmOverlay();
+    if (onDismiss) onDismiss();
+  });
 
   document.body.appendChild(overlay);
-
-  // Auto-dismiss after 10 seconds
-  setTimeout(removeAlarmOverlay, 10000);
 }
 
 /**
@@ -140,8 +160,9 @@ export function removeAlarmOverlay() {
 /**
  * Fires all notification channels for an alarm based on its settings.
  * @param {Object} alarm - Alarm object with notifications settings and label/id.
+ * @param {function} onDismiss - Callback when user dismisses.
  */
-export function fireNotifications(alarm) {
+export function fireNotifications(alarm, onDismiss) {
   const notif = alarm.notifications || { browser: true, inApp: true, audio: true };
 
   if (notif.browser && 'Notification' in window) {
@@ -149,7 +170,7 @@ export function fireNotifications(alarm) {
   }
 
   if (notif.inApp) {
-    showAlarmOverlay(alarm);
+    showAlarmOverlay(alarm, onDismiss);
   }
 
   if (notif.audio) {
@@ -158,10 +179,28 @@ export function fireNotifications(alarm) {
 }
 
 /**
+ * Stops all notification channels for an alarm.
+ * @param {Object} alarm - Alarm object.
+ */
+export function stopNotifications(alarm) {
+  const notif = alarm.notifications || { browser: true, inApp: true, audio: true };
+
+  if (notif.audio) {
+    stopAudio();
+  }
+
+  if (notif.inApp) {
+    removeAlarmOverlay();
+  }
+}
+
+/**
  * Resets the audio context (for testing).
  */
 export function resetAudioContext() {
   audioCtx = null;
+  activeOscillator = null;
+  activeGain = null;
 }
 
 // Expose initAudio for external warm-up calls

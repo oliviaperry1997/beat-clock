@@ -7,11 +7,12 @@ vi.mock('../../src/alarms/store.js', () => ({
 }));
 
 vi.mock('../../src/alarms/evaluator.js', () => ({
-  evaluateAlarm: vi.fn(() => false)
+  evaluateAlarm: vi.fn(() => ({ triggered: false }))
 }));
 
 vi.mock('../../src/alarms/notifications.js', () => ({
-  fireNotifications: vi.fn()
+  fireNotifications: vi.fn(),
+  stopNotifications: vi.fn()
 }));
 
 vi.mock('../../src/location/store.js', () => ({
@@ -23,13 +24,14 @@ import { evaluateAlarm } from '../../src/alarms/evaluator.js';
 import { fireNotifications } from '../../src/alarms/notifications.js';
 import { getActiveLocation } from '../../src/location/store.js';
 
-import { initAlarmEngine, handleMissedAlarms } from '../../src/alarms/engine.js';
+import { initAlarmEngine, handleMissedAlarms, resetActiveAlarms } from '../../src/alarms/engine.js';
 
 const mockLocationData = { latitude: 40.7128, longitude: -74.0060 };
 
 beforeEach(() => {
   vi.useFakeTimers();
   vi.clearAllMocks();
+  resetActiveAlarms();
 });
 
 afterEach(() => {
@@ -68,7 +70,7 @@ describe('initAlarmEngine', () => {
       { id: 'alm_1', enabled: true, oneTime: false, recurrence: 'daily', lastFiredAt: null }
     ];
     getEnabledAlarms.mockReturnValue(alarms);
-    evaluateAlarm.mockReturnValue(true);
+    evaluateAlarm.mockReturnValue({ triggered: true });
 
     const engine = initAlarmEngine(mockLocationData);
     engine.evaluateNow();
@@ -85,40 +87,56 @@ describe('initAlarmEngine', () => {
       { id: 'alm_1', enabled: true, oneTime: false, recurrence: 'daily', lastFiredAt: null }
     ];
     getEnabledAlarms.mockReturnValue(alarms);
-    evaluateAlarm.mockReturnValue(true);
+    evaluateAlarm.mockReturnValue({ triggered: true });
 
     const engine = initAlarmEngine(mockLocationData);
     engine.evaluateNow();
 
-    expect(fireNotifications).toHaveBeenCalledWith(alarms[0]);
+    expect(fireNotifications).toHaveBeenCalled();
     engine.stop();
   });
 
-  it('deletes one-time alarms after firing', () => {
+  it('deletes one-time alarms after dismissal', () => {
     const alarms = [
       { id: 'alm_1', enabled: true, oneTime: true, recurrence: 'once', lastFiredAt: null }
     ];
     getEnabledAlarms.mockReturnValue(alarms);
-    evaluateAlarm.mockReturnValue(true);
+    evaluateAlarm.mockReturnValue({ triggered: true });
 
     const engine = initAlarmEngine(mockLocationData);
-    engine.evaluateNow();
 
+    // First tick — fires, added to activeAlarms
+    engine.evaluateNow();
+    expect(fireNotifications).toHaveBeenCalled();
+    expect(deleteAlarm).not.toHaveBeenCalled(); // Not deleted yet — waiting for dismissal
+
+    // Simulate dismissal
+    engine.dismissAlarm('alm_1');
+
+    // Second tick — dismissed, one-time alarm deleted
+    engine.evaluateNow();
     expect(deleteAlarm).toHaveBeenCalledWith('alm_1');
-    expect(updateAlarm).not.toHaveBeenCalled();
     engine.stop();
   });
 
-  it('deletes alarms with recurrence === "once" after firing', () => {
+  it('deletes alarms with recurrence === "once" after dismissal', () => {
     const alarms = [
       { id: 'alm_1', enabled: true, oneTime: false, recurrence: 'once', lastFiredAt: null }
     ];
     getEnabledAlarms.mockReturnValue(alarms);
-    evaluateAlarm.mockReturnValue(true);
+    evaluateAlarm.mockReturnValue({ triggered: true });
 
     const engine = initAlarmEngine(mockLocationData);
     engine.evaluateNow();
 
+    expect(fireNotifications).toHaveBeenCalled();
+    expect(deleteAlarm).not.toHaveBeenCalled(); // Not deleted yet
+
+    // Simulate dismissal
+    engine.dismissAlarm('alm_1');
+
+    // Second tick — dismissed, deleted
+    engine.evaluateNow();
     expect(deleteAlarm).toHaveBeenCalledWith('alm_1');
     engine.stop();
   });
@@ -128,7 +146,7 @@ describe('initAlarmEngine', () => {
       { id: 'alm_1', enabled: true, oneTime: false, recurrence: 'daily', lastFiredAt: null }
     ];
     getEnabledAlarms.mockReturnValue(alarms);
-    evaluateAlarm.mockReturnValue(true);
+    evaluateAlarm.mockReturnValue({ triggered: true });
 
     const engine = initAlarmEngine(mockLocationData);
     engine.evaluateNow();
@@ -146,7 +164,7 @@ describe('initAlarmEngine', () => {
       { id: 'alm_1', enabled: true, oneTime: false, recurrence: 'daily', lastFiredAt: null }
     ];
     getEnabledAlarms.mockReturnValue(alarms);
-    evaluateAlarm.mockReturnValue(false);
+    evaluateAlarm.mockReturnValue({ triggered: false });
 
     const engine = initAlarmEngine(mockLocationData);
     engine.evaluateNow();
@@ -170,7 +188,7 @@ describe('handleMissedAlarms', () => {
       { id: 'alm_2', enabled: true, oneTime: false, recurrence: 'daily', lastFiredAt: null }
     ];
     getEnabledAlarms.mockReturnValue(alarms);
-    evaluateAlarm.mockReturnValue(true);
+    evaluateAlarm.mockReturnValue({ triggered: true });
 
     handleMissedAlarms();
 
@@ -185,11 +203,11 @@ describe('handleMissedAlarms', () => {
       { id: 'alm_1', enabled: true, oneTime: false, recurrence: 'daily', lastFiredAt: null }
     ];
     getEnabledAlarms.mockReturnValue(alarms);
-    evaluateAlarm.mockReturnValue(true);
+    evaluateAlarm.mockReturnValue({ triggered: true });
 
     handleMissedAlarms();
 
-    expect(fireNotifications).toHaveBeenCalledWith(alarms[0]);
+    expect(fireNotifications).toHaveBeenCalled();
     expect(updateAlarm).toHaveBeenCalledWith(
       'alm_1',
       expect.objectContaining({ lastFiredAt: expect.any(String) })

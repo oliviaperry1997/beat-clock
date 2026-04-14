@@ -281,9 +281,10 @@ describe('parameter form', () => {
       .find(b => b.dataset.template === 'at-beat');
     templateBtn.click();
 
-    const inputs = document.querySelectorAll('.param-input[data-param]');
-    expect(inputs.length).toBe(1);
-    expect(inputs[0].dataset.param).toBe('beat');
+    // Check that the beat param input exists (timeout field is separate)
+    const beatInput = document.querySelector('.param-input[data-param="beat"]');
+    expect(beatInput).not.toBeNull();
+    expect(beatInput.dataset.param).toBe('beat');
   });
 
   it('renders template label in form', async () => {
@@ -363,7 +364,7 @@ describe('parameter form', () => {
     expect(audioToggle).not.toBeNull();
   });
 
-  it('templates with no params render no inputs', async () => {
+  it('templates with no params render no template inputs', async () => {
     initAlarmSystem({ latitude: 51.5, longitude: -0.1 });
     document.getElementById('alarm-trigger').click();
 
@@ -375,8 +376,9 @@ describe('parameter form', () => {
       .find(b => b.dataset.template === 'on-full-moon');
     templateBtn.click();
 
-    const inputs = document.querySelectorAll('.param-input[data-param]');
-    expect(inputs.length).toBe(0);
+    // No template param inputs (timeout field is separate, data-param="timeoutDuration")
+    const templateInputs = document.querySelectorAll('.param-input[data-param="phase"]');
+    expect(templateInputs.length).toBe(0);
   });
 });
 

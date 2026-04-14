@@ -81,8 +81,8 @@ initLocationSystem((location) => {
   // Invalidate astronomical cache on location change
   invalidateCache();
 
-  // Initialize alarm UI once location is ready
-  initAlarmSystem(location);
+  // Initialize alarm UI once location is ready (pass dismiss callback)
+  initAlarmSystem(location, (alarmId) => alarmEngine.dismissAlarm(alarmId));
 });
 
 // Handle missed alarms when tab becomes visible again

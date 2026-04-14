@@ -19,7 +19,8 @@ import {
   evaluateCondition,
   evaluateDateFilter,
   evaluateRecurrence,
-  shouldFireAlarm
+  isNotDismissed,
+  isNotTimedOut
 } from '../../src/alarms/evaluator.js';
 
 import * as astroCache from '../../src/alarms/astro-cache.js';
@@ -54,97 +55,149 @@ beforeEach(() => {
   astroCache.getAstroEvents.mockReturnValue(getMockEvents());
 });
 
-describe('shouldFireAlarm', () => {
-  it('returns true when lastFiredAt is null', () => {
-    const alarm = { lastFiredAt: null };
-    expect(shouldFireAlarm(alarm, now)).toBe(true);
+describe('isNotDismissed', () => {
+  it('returns true when not dismissed', () => {
+    expect(isNotDismissed({})).toBe(true);
+    expect(isNotDismissed({ dismissedAt: null })).toBe(true);
   });
 
-  it('returns true when last fired > 86400ms ago (one beat)', () => {
-    const alarm = { lastFiredAt: new Date(now.getTime() - 87000).toISOString() };
-    expect(shouldFireAlarm(alarm, now)).toBe(true);
+  it('returns false when dismissed', () => {
+    expect(isNotDismissed({ dismissedAt: '2026-04-15T12:00:00Z' })).toBe(false);
+  });
+});
+
+describe('isNotTimedOut', () => {
+  it('returns true when no timeout set', () => {
+    expect(isNotTimedOut({}, now)).toBe(true);
+    expect(isNotTimedOut({ lastFiredAt: null }, now)).toBe(true);
   });
 
-  it('returns false when last fired < 86400ms ago', () => {
-    const alarm = { lastFiredAt: new Date(now.getTime() - 50000).toISOString() };
-    expect(shouldFireAlarm(alarm, now)).toBe(false);
+  it('returns true when timeout not yet elapsed', () => {
+    const alarm = {
+      lastFiredAt: new Date(now.getTime() - 30000).toISOString(),
+      timeoutDuration: 60000 // 1 minute
+    };
+    expect(isNotTimedOut(alarm, now)).toBe(false);
+  });
+
+  it('returns true when timeout has elapsed', () => {
+    const alarm = {
+      lastFiredAt: new Date(now.getTime() - 90000).toISOString(),
+      timeoutDuration: 60000 // 1 minute
+    };
+    expect(isNotTimedOut(alarm, now)).toBe(true);
   });
 });
 
 describe('evaluateAlarm', () => {
-  it('returns false when alarm.enabled is false', () => {
+  it('returns { triggered: false } when alarm.enabled is false', () => {
     const alarm = {
       enabled: false,
       condition: { type: 'standard-time', params: { hours: 12, minutes: 0 } }
     };
-    expect(evaluateAlarm(alarm, now, 40.7128, -74.0060)).toBe(false);
+    expect(evaluateAlarm(alarm, now, 40.7128, -74.0060)).toEqual({ triggered: false });
   });
 
-  it('returns false when primary condition does not match', () => {
+  it('returns { triggered: false } when primary condition does not match', () => {
+    // Standard time 8:00 vs current time 12:00 — target already passed
+    // For standard-time, triggered = now >= targetTime, so 12:00 >= 8:00 = true
+    // To test false, use a future time (16:00)
     const alarm = {
       enabled: true,
-      condition: { type: 'standard-time', params: { hours: 8, minutes: 0 } }
+      condition: { type: 'standard-time', params: { hours: 16, minutes: 0 } }
     };
-    expect(evaluateAlarm(alarm, now, 40.7128, -74.0060)).toBe(false);
+    expect(evaluateAlarm(alarm, now, 40.7128, -74.0060)).toEqual({ triggered: false });
   });
 
-  it('returns true when all checks pass', () => {
+  it('returns { triggered: true } when standard-time target is reached', () => {
     const alarm = {
       enabled: true,
       condition: { type: 'standard-time', params: { hours: 12, minutes: 0 } },
-      recurrence: 'once',
-      lastFiredAt: null
+      recurrence: 'once'
     };
-    expect(evaluateAlarm(alarm, now, 40.7128, -74.0060)).toBe(true);
+    expect(evaluateAlarm(alarm, now, 40.7128, -74.0060)).toEqual({ triggered: true });
+  });
+
+  it('returns { triggered: false } when beat target not yet reached', () => {
+    // Mock returns @500.00, target is 600 → 500 < 600 → not triggered
+    const alarm = {
+      enabled: true,
+      condition: { type: 'beat-time', params: { beat: 600 } },
+      recurrence: 'once'
+    };
+    expect(evaluateAlarm(alarm, now, 40.7128, -74.0060)).toEqual({ triggered: false });
+  });
+
+  it('returns { triggered: true } when beat target reached', () => {
+    const alarm = {
+      enabled: true,
+      condition: { type: 'beat-time', params: { beat: 500 } },
+      recurrence: 'once'
+    };
+    expect(evaluateAlarm(alarm, now, 40.7128, -74.0060)).toEqual({ triggered: true });
+  });
+
+  it('returns { triggered: true } when beat target passed (after target)', () => {
+    // Mock returns @500.00, target is 400 → 500 >= 400 → triggered
+    const alarm = {
+      enabled: true,
+      condition: { type: 'beat-time', params: { beat: 400 } },
+      recurrence: 'once'
+    };
+    expect(evaluateAlarm(alarm, now, 40.7128, -74.0060)).toEqual({ triggered: true });
   });
 });
 
 describe('evaluateCondition', () => {
-  it('standard-time returns true within tolerance', () => {
+  it('standard-time returns { triggered: true } when target reached', () => {
     const condition = { type: 'standard-time', params: { hours: 12, minutes: 0 } };
     const testTime = new Date(2026, 3, 15, 12, 0, 0);
     const events = getMockEvents();
-    expect(evaluateCondition(condition, testTime, events)).toBe(true);
+    expect(evaluateCondition(condition, testTime, events)).toEqual({ triggered: true });
   });
 
-  it('standard-time returns false outside tolerance', () => {
-    const condition = { type: 'standard-time', params: { hours: 8, minutes: 0 } };
+  it('standard-time returns { triggered: false } when not yet reached', () => {
+    const condition = { type: 'standard-time', params: { hours: 16, minutes: 0 } };
     const testTime = new Date(2026, 3, 15, 12, 0, 0);
     const events = getMockEvents();
-    expect(evaluateCondition(condition, testTime, events)).toBe(false);
+    expect(evaluateCondition(condition, testTime, events)).toEqual({ triggered: false });
   });
 
-  it('beat-time returns true within 1-beat tolerance', () => {
+  it('beat-time returns { triggered: true } when current >= target', () => {
     const condition = { type: 'beat-time', params: { beat: 500 } };
     const events = getMockEvents();
-    expect(evaluateCondition(condition, now, events)).toBe(true);
+    expect(evaluateCondition(condition, now, events)).toEqual({ triggered: true });
   });
 
-  it('date-trigger returns true', () => {
+  it('beat-time returns { triggered: false } when current < target', () => {
+    const condition = { type: 'beat-time', params: { beat: 600 } };
+    const events = getMockEvents();
+    expect(evaluateCondition(condition, now, events)).toEqual({ triggered: false });
+  });
+
+  it('date-trigger returns { triggered: true }', () => {
     const condition = { type: 'date-trigger', params: {} };
     const events = getMockEvents();
-    expect(evaluateCondition(condition, now, events)).toBe(true);
+    expect(evaluateCondition(condition, now, events)).toEqual({ triggered: true });
   });
 
-  it('astro-offset returns true when within tolerance', () => {
+  it('astro-offset returns { triggered: true } when time reached', () => {
     const condition = {
       type: 'astro-offset',
-      params: { offsetMinutes: 3600, event: 'sunrise' }
+      params: { offsetMinutes: 60, event: 'sunrise' }
     };
-    // sunrise is at now - 3600000ms (1 hour before), + 3600 minutes = way in future
-    // Let's set offsetMinutes to 60 (1 hour) to match now
-    condition.params.offsetMinutes = 60;
+    // sunrise is at now - 3600000ms (1 hour before), + 60 minutes = now
     const events = getMockEvents();
-    expect(evaluateCondition(condition, now, events)).toBe(true);
+    expect(evaluateCondition(condition, now, events)).toEqual({ triggered: true });
   });
 
-  it('astro-offset returns false for invalid event time', () => {
+  it('astro-offset returns { triggered: false } for invalid event time', () => {
     const condition = {
       type: 'astro-offset',
       params: { offsetMinutes: 30, event: 'nonexistent' }
     };
     const events = getMockEvents();
-    expect(evaluateCondition(condition, now, events)).toBe(false);
+    expect(evaluateCondition(condition, now, events)).toEqual({ triggered: false });
   });
 });
 
@@ -174,22 +227,21 @@ describe('evaluateDateFilter', () => {
 
   it('equinox uses isEquinoxDay', () => {
     const filter = { type: 'equinox' };
-    expect(evaluateDateFilter(filter, now, getMockEvents())).toBe(false); // not equinox day
+    expect(evaluateDateFilter(filter, now, getMockEvents())).toBe(false);
   });
 
   it('solstice uses isSolsticeDay', () => {
     const filter = { type: 'solstice' };
-    expect(evaluateDateFilter(filter, now, getMockEvents())).toBe(false); // not solstice day
+    expect(evaluateDateFilter(filter, now, getMockEvents())).toBe(false);
   });
 
   it('weekdays returns true for matching day', () => {
-    // April 15, 2026 is a Wednesday (getDay() === 3)
     const filter = { type: 'weekdays', params: { days: [1, 2, 3, 4, 5] } };
     expect(evaluateDateFilter(filter, now, getMockEvents())).toBe(true);
   });
 
   it('weekdays returns false for non-matching day', () => {
-    const filter = { type: 'weekdays', params: { days: [0, 6] } }; // weekend only
+    const filter = { type: 'weekdays', params: { days: [0, 6] } };
     expect(evaluateDateFilter(filter, now, getMockEvents())).toBe(false);
   });
 });
@@ -210,7 +262,6 @@ describe('evaluateRecurrence', () => {
       recurrence: 'weekly',
       condition: { type: 'standard-time', params: {}, dateFilter: { type: 'weekdays', params: { days: [1, 2, 3, 4, 5] } } }
     };
-    // April 15, 2026 is Wednesday (getDay() === 3)
     expect(evaluateRecurrence(alarm, now)).toBe(true);
   });
 

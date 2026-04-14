@@ -141,7 +141,7 @@ describe('Integration: Alarm flows', () => {
     // Evaluate at matching time
     const matchTime = new Date(2026, 3, 15, 12, 0, 0);
     const result = evaluateAlarm(alarm, matchTime, 40.7128, -74.0060);
-    expect(result).toBe(true);
+    expect(result).toEqual({ triggered: true });
 
     // After firing, one-time alarm should be deleted
     deleteAlarm(alarm.id);
@@ -170,7 +170,7 @@ describe('Integration: Alarm flows', () => {
     });
 
     const result = evaluateAlarm(alarm, matchTime, 40.7128, -74.0060);
-    expect(result).toBe(true);
+    expect(result).toEqual({ triggered: true });
 
     // Recurring alarm updates lastFiredAt (not deleted)
     // Simulate the engine behavior
@@ -205,12 +205,12 @@ describe('Integration: Alarm flows', () => {
 
     // Should fire on full moon day
     const resultFullMoon = evaluateAlarm(alarm, matchTime, 40.7128, -74.0060);
-    expect(resultFullMoon).toBe(true);
+    expect(resultFullMoon).toEqual({ triggered: true });
 
     // Should NOT fire on non-full-moon day
     astroCache.isFullMoonDay.mockReturnValue(false);
     const resultNotFullMoon = evaluateAlarm(alarm, matchTime, 40.7128, -74.0060);
-    expect(resultNotFullMoon).toBe(false);
+    expect(resultNotFullMoon).toEqual({ triggered: false });
   });
 
   it('weekly recurrence weekday filter: Mon-Fri filter blocks weekend', () => {
@@ -227,12 +227,12 @@ describe('Integration: Alarm flows', () => {
     // Monday (getDay=1) should pass
     const monday = new Date(2026, 3, 13, 9, 0, 0); // April 13, 2026 = Monday
     const resultMon = evaluateAlarm(alarm, monday, 40.7128, -74.0060);
-    expect(resultMon).toBe(true);
+    expect(resultMon).toEqual({ triggered: true });
 
     // Saturday (getDay=6) should fail
     const saturday = new Date(2026, 3, 18, 9, 0, 0); // April 18, 2026 = Saturday
     const resultSat = evaluateAlarm(alarm, saturday, 40.7128, -74.0060);
-    expect(resultSat).toBe(false);
+    expect(resultSat).toEqual({ triggered: false });
   });
 
   it('toggle alarm on/off: disabled alarm does not evaluate', () => {
@@ -244,9 +244,9 @@ describe('Integration: Alarm flows', () => {
     // Initially enabled
     expect(alarm.enabled).toBe(true);
 
-    // Evaluate at matching time - should return true
+    // Evaluate at matching time
     const matchTime = new Date(2026, 3, 15, 12, 0, 0);
-    expect(evaluateAlarm(alarm, matchTime, 40.7128, -74.0060)).toBe(true);
+    expect(evaluateAlarm(alarm, matchTime, 40.7128, -74.0060)).toEqual({ triggered: true });
 
     // Toggle off
     toggleAlarm(alarm.id);
@@ -254,13 +254,13 @@ describe('Integration: Alarm flows', () => {
     expect(toggled.enabled).toBe(false);
 
     // Evaluate again - should return false (disabled)
-    expect(evaluateAlarm(toggled, matchTime, 40.7128, -74.0060)).toBe(false);
+    expect(evaluateAlarm(toggled, matchTime, 40.7128, -74.0060)).toEqual({ triggered: false });
 
     // Toggle back on
     toggleAlarm(alarm.id);
     const reenabled = loadAlarms()[0];
     expect(reenabled.enabled).toBe(true);
-    expect(evaluateAlarm(reenabled, matchTime, 40.7128, -74.0060)).toBe(true);
+    expect(evaluateAlarm(reenabled, matchTime, 40.7128, -74.0060)).toEqual({ triggered: true });
   });
 });
 
