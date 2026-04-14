@@ -1,0 +1,108 @@
+/* meridian-select.css
+ * Styles for the meridian/offset selector component.
+ * Follows the glassmorphic dark UI pattern of the existing app.
+ * No CSS custom properties — all values are literal rgba() and rem.
+ */
+
+/* Root container */
+.meridian-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+/* Preset <select> */
+.meridian-preset-select {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.95);
+  font: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  appearance: none;
+  -webkit-appearance: none;
+  transition: background 150ms ease-out;
+}
+
+.meridian-preset-select:hover {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.meridian-preset-select:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.meridian-preset-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Custom input panel — revealed when 'Custom…' is selected */
+.meridian-custom-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* Custom degree <input type="number"> */
+.meridian-custom-input {
+  width: 100%;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.95);
+  font: inherit;
+  font-size: 0.95rem;
+  transition: background 150ms ease-out, border-color 150ms ease-out;
+  box-sizing: border-box;
+}
+
+.meridian-custom-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.meridian-custom-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.meridian-custom-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Invalid state — applied when input is out of range or non-numeric */
+.meridian-custom-input.meridian-input--invalid {
+  border-color: #f87171;
+}
+
+/* Error message span */
+.meridian-custom-error {
+  color: #f87171;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+.meridian-custom-error.hidden {
+  display: none;
+}
+
+/* Remove browser default number input spinners for a cleaner look */
+.meridian-custom-input::-webkit-outer-spin-button,
+.meridian-custom-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.meridian-custom-input[type=number] {
+  -moz-appearance: textfield;
+}
