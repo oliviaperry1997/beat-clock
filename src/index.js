@@ -4,6 +4,7 @@ import { initLocationSystem } from "./location/ui.js";
 import { initConverterPanel } from "./converters/ui.js";
 import { getSkyGradientColors } from "./sky.js";
 import { initAlarmEngine, handleMissedAlarms } from "./alarms/engine.js";
+import { initAlarmSystem } from "./alarms/ui.js";
 import { invalidateCache } from "./alarms/astro-cache.js";
 import "./converters/styles.css";
 
@@ -57,6 +58,7 @@ function updateClock(userLocation) {
   // Update sky background
   const sky = getSkyGradientColors(now, userLocation?.latitude, userLocation?.longitude);
   document.body.style.background = `linear-gradient(180deg, ${sky.topColor}, ${sky.bottomColor})`;
+  document.body.style.backgroundAttachment = 'fixed';
 
   updateMoonIndicator(lunisolar);
 }
@@ -78,6 +80,9 @@ initLocationSystem((location) => {
 
   // Invalidate astronomical cache on location change
   invalidateCache();
+
+  // Initialize alarm UI once location is ready
+  initAlarmSystem(location);
 });
 
 // Handle missed alarms when tab becomes visible again

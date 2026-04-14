@@ -86,15 +86,22 @@ function renderLocationSelector() {
     createLocationSelector();
     return;
   }
-  
+
+  // If container exists but is empty (no children populated yet), create the full UI
+  if (container.children.length === 0 && !container.classList.contains('location-selector')) {
+    container.remove();
+    createLocationSelector();
+    return;
+  }
+
   const locations = loadLocations();
   const active = getActiveLocation();
-  
+
   const activeNameEl = document.getElementById('active-location-name');
   if (activeNameEl && active) {
     activeNameEl.textContent = formatLocationName(active);
   }
-  
+
   renderSavedLocationsList();
 }
 
