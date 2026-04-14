@@ -83,33 +83,33 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| YEAR-01 | Phase [N] | Pending |
-| YEAR-02 | Phase [N] | Pending |
-| YEAR-03 | Phase [N] | Pending |
-| YEAR-04 | Phase [N] | Pending |
-| DATE-01 | Phase [N] | Pending |
-| DATE-02 | Phase [N] | Pending |
-| DATE-03 | Phase [N] | Pending |
-| DATE-04 | Phase [N] | Pending |
-| STDTIME-01 | Phase [N] | Pending |
-| STDTIME-02 | Phase [N] | Pending |
-| STDTIME-03 | Phase [N] | Pending |
-| STDTIME-04 | Phase [N] | Pending |
-| STDTIME-05 | Phase [N] | Pending |
-| SOLTIME-01 | Phase [N] | Pending |
-| SOLTIME-02 | Phase [N] | Pending |
-| SOLTIME-03 | Phase [N] | Pending |
-| SOLTIME-04 | Phase [N] | Pending |
-| FORMAT-01 | Phase [N] | Pending |
-| FORMAT-02 | Phase [N] | Pending |
-| FORMAT-03 | Phase [N] | Pending |
-| FORMAT-04 | Phase [N] | Pending |
-| FORMAT-05 | Phase [N] | Pending |
+| YEAR-01 | Phase 11 | Pending |
+| YEAR-02 | Phase 11 | Pending |
+| YEAR-03 | Phase 11 | Pending |
+| YEAR-04 | Phase 11 | Pending |
+| DATE-01 | Phase 11 | Pending |
+| DATE-02 | Phase 11 | Pending |
+| DATE-03 | Phase 11 | Pending |
+| DATE-04 | Phase 11 | Pending |
+| STDTIME-01 | Phase 12 | Pending |
+| STDTIME-02 | Phase 12 | Pending |
+| STDTIME-03 | Phase 12 | Pending |
+| STDTIME-04 | Phase 12 | Pending |
+| STDTIME-05 | Phase 12 | Pending |
+| SOLTIME-01 | Phase 13 | Pending |
+| SOLTIME-02 | Phase 13 | Pending |
+| SOLTIME-03 | Phase 13 | Pending |
+| SOLTIME-04 | Phase 13 | Pending |
+| FORMAT-01 | Phase 14 | Pending |
+| FORMAT-02 | Phase 10 | Pending |
+| FORMAT-03 | Phase 14 | Pending |
+| FORMAT-04 | Phase 10 | Pending |
+| FORMAT-05 | Phase 14 | Pending |
 
 **Coverage:**
-- v1.0 requirements: 21 total
-- Mapped to phases: 0
-- Unmapped: 21 ⚠️
+- v1.0 requirements: 22 total
+- Mapped to phases: 22
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-14*
