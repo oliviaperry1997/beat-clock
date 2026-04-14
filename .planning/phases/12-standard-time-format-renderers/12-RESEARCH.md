@@ -144,7 +144,7 @@ const msOfDay = now.getUTCHours() * 3600000
               + now.getUTCMilliseconds();
 
 const meridianOffsetMs = (opts.meridianOffset ?? 0) * 3600000;
-const totalMs = (msOfDay + meridianOffsetMs % 86400000 + 86400000) % 86400000;
+const totalMs = ((msOfDay + meridianOffsetMs) % 86400000 + 86400000) % 86400000;
 const beats = totalMs / 86400;   // 86400ms per beat
 
 return `@${beats.toFixed(2).padStart(6, '0')}`;
@@ -164,7 +164,7 @@ Time-as-degrees: `0° = midnight`, `180° = noon`, `360° = end-of-day (wraps to
 ```js
 const meridianOffsetMs = (opts.meridianOffset ?? 0) * 3600000;
 const msOfDay = now.getUTCHours() * 3600000 + ...;
-const adjustedMs = (msOfDay + meridianOffsetMs % 86400000 + 86400000) % 86400000;
+const adjustedMs = ((msOfDay + meridianOffsetMs) % 86400000 + 86400000) % 86400000;
 const degrees = adjustedMs / 86400000 * 360;
 return `\u231A ${degrees.toFixed(2)}\u00B0`;
 // e.g. ⌚ 270.25°
