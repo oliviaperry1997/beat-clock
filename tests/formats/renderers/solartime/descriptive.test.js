@@ -50,10 +50,10 @@ describe('Descriptive solar time renderer', () => {
       
       // Should return one of the valid labels (any label is acceptable, we're testing integration)
       const validLabels = [
-        'Astronomical Dawn', 'Morning Twilight', 'Sunrise',
+        'Dawn', 'Morning Twilight', 'Sunrise',
         'Early Morning', 'Midmorning', 'Late Morning', 'Noon',
         'Early Afternoon', 'Midafternoon', 'Late Afternoon',
-        'Sunset', 'Evening Twilight', 'Astronomical Dusk',
+        'Sunset', 'Evening Twilight', 'Dusk',
         'Early Night', 'Midnight', 'Late Night',
         'Day', 'Twilight', 'Night' // altitude fallback labels
       ];
@@ -93,8 +93,8 @@ describe('Descriptive solar time renderer', () => {
       
       // Should be a nighttime label
       const nightLabels = [
-        'Evening Twilight', 'Astronomical Dusk', 'Early Night',
-        'Midnight', 'Late Night', 'Astronomical Dawn', 'Morning Twilight',
+        'Evening Twilight', 'Dusk', 'Early Night',
+        'Midnight', 'Late Night', 'Dawn', 'Morning Twilight',
         'Night', 'Twilight'
       ];
       
@@ -110,7 +110,7 @@ describe('Descriptive solar time renderer', () => {
       
       // Should NOT be night-related (sun never sets)
       const forbiddenLabels = [
-        'Sunset', 'Evening Twilight', 'Astronomical Dusk',
+        'Sunset', 'Evening Twilight', 'Dusk',
         'Early Night', 'Late Night', 'Night'
       ];
       

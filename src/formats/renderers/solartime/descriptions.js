@@ -65,21 +65,28 @@ export function getDescription(date, latitude, longitude) {
     // Compute midnight as solar noon + 12 hours
     const midnight = hasSolarNoon ? new Date(times.solarNoon.getTime() + 12 * 3600000) : null;
     
-    // Polar edge case detection (D-26)
+    // Polar edge case detection
     
-    // Case 1: Polar day (sun ≥ 0° all day, no sunset/sunrise)
+    // Case 1: Polar day (sun ≥ 0° all day, no sunset/sunrise) OR complete polar night (sun < -18° all day)
+    // Both present as: no sunrise, no sunset, no nightEnd, no night
+    // Distinguish using current sun altitude
     if (!hasSunrise && !hasSunset && !hasNightEnd && !hasNight) {
-      return polarDayLabel(now, times, midnight);
+      const pos = SunCalc.getPosition(date, latitude, longitude);
+      if (pos.altitude >= 0) {
+        return polarDayLabel(now, times, midnight);
+      } else {
+        return completePolarNightLabel(now, times, midnight);
+      }
     }
     
     // Case 2: White nights (sun sets but never reaches -18°)
     if (hasSunrise && hasSunset && !hasNightEnd && !hasNight) {
-      return whiteNightLabel(now, times);
+      return whiteNightLabel(now, times, windowMs);
     }
     
-    // Case 3: Polar night (sun never rises above horizon but has twilight)
+    // Case 3: Polar night (sun never rises above horizon but has astronomical twilight)
     if (!hasSunrise && !hasSunset && hasNightEnd && hasNight) {
-      return polarNightLabel(now, times, midnight);
+      return polarNightLabel(now, times, midnight, windowMs);
     }
     
     // Case 4: Normal solar cycle (all day events present)
@@ -96,7 +103,7 @@ export function getDescription(date, latitude, longitude) {
 }
 
 /**
- * Normal solar cycle: 16-label event-anchored system (D-24)
+ * Normal solar cycle: 16-label event-anchored system with short-day compression
  */
 function normalSolarLabel(now, times, midnight, nextDayDawn = null) {
   const { sunrise, sunset, solarNoon, nightEnd, night } = times;
@@ -112,14 +119,33 @@ function normalSolarLabel(now, times, midnight, nextDayDawn = null) {
   // Define event windows (±15 minutes)
   const windowMs = 15 * 60000;
   
-  // Astronomical Dawn (±15 min)
-  if (Math.abs(now - dawn) <= windowMs) return 'Astronomical Dawn';
+  // Dawn (±15 min)
+  if (Math.abs(now - dawn) <= windowMs) return 'Dawn';
   
   // Morning Twilight (dawn → sunrise)
   if (now > dawn + windowMs && now < riseTime - windowMs) return 'Morning Twilight';
   
   // Sunrise (±15 min)
   if (Math.abs(now - riseTime) <= windowMs) return 'Sunrise';
+  
+  // Short-day compression (checked before Noon/Morning/Afternoon sub-phases)
+  // Gap = end of Sunrise window → start of Sunset window
+  const dayGap = (setTime - windowMs) - (riseTime + windowMs);
+  if (dayGap < 90 * 60000 && now > riseTime + windowMs && now < setTime - windowMs) {
+    return 'Day';
+  }
+  
+  // Morning compression: end of Sunrise window → start of Noon window < 90 min
+  const morningGap = (noonTime - windowMs) - (riseTime + windowMs);
+  if (morningGap < 90 * 60000 && now > riseTime + windowMs && now < noonTime - windowMs) {
+    return 'Morning';
+  }
+  
+  // Afternoon compression: end of Noon window → start of Sunset window < 90 min
+  const afternoonGap = (setTime - windowMs) - (noonTime + windowMs);
+  if (afternoonGap < 90 * 60000 && now > noonTime + windowMs && now < setTime - windowMs) {
+    return 'Afternoon';
+  }
   
   // Noon (±15 min) - check before partitioning day phases
   if (Math.abs(now - noonTime) <= windowMs) return 'Noon';
@@ -152,8 +178,8 @@ function normalSolarLabel(now, times, midnight, nextDayDawn = null) {
   // Evening Twilight (sunset → dusk)
   if (now > setTime + windowMs && now < duskTime - windowMs) return 'Evening Twilight';
   
-  // Astronomical Dusk (±15 min)
-  if (Math.abs(now - duskTime) <= windowMs) return 'Astronomical Dusk';
+  // Dusk (±15 min)
+  if (Math.abs(now - duskTime) <= windowMs) return 'Dusk';
   
   // Midnight (±15 min)
   if (Math.abs(now - midnightTime) <= windowMs) return 'Midnight';
@@ -176,32 +202,30 @@ function normalSolarLabel(now, times, midnight, nextDayDawn = null) {
 }
 
 /**
- * Polar day: Skip night phases, use day phases only (D-26.1)
+ * Polar day: sun never sets — use Antinoon/Noon anchors, no night labels
  */
 function polarDayLabel(now, times, midnight) {
   const { solarNoon } = times;
   if (!solarNoon) return 'Day'; // fallback
   
   const noonTime = solarNoon.getTime();
-  const midnightTime = midnight ? midnight.getTime() : noonTime + 12 * 3600000;
+  const antiNoonTime = midnight ? midnight.getTime() : noonTime + 12 * 3600000;
   
-  // Partition day into phases without sunrise/sunset anchors
-  // Use noon and midnight as reference points
   const windowMs = 15 * 60000;
   
   // Noon window (±15 min)
   if (Math.abs(now - noonTime) <= windowMs) return 'Noon';
   
-  // Midnight window (±15 min) - check both today's and yesterday's midnight
-  if (Math.abs(now - midnightTime) <= windowMs) return 'Midnight';
+  // Antinoon window (±15 min) — replaces Midnight for polar day
+  if (Math.abs(now - antiNoonTime) <= windowMs) return 'Antinoon';
   
-  // Also check if we're at yesterday's midnight (which would be ~24h before today's midnight)
-  const yesterdayMidnight = midnightTime - 24 * 3600000;
-  if (Math.abs(now - yesterdayMidnight) <= windowMs) return 'Midnight';
+  // Also check yesterday's antinoon (~24h before today's antinoon)
+  const yesterdayAntiNoon = antiNoonTime - 24 * 3600000;
+  if (Math.abs(now - yesterdayAntiNoon) <= windowMs) return 'Antinoon';
   
-  // Partition between noon and midnight
-  if (now > noonTime + windowMs && now < midnightTime - windowMs) {
-    const duration = midnightTime - noonTime;
+  // Partition between noon and antinoon (afternoon arc)
+  if (now > noonTime + windowMs && now < antiNoonTime - windowMs) {
+    const duration = antiNoonTime - noonTime;
     const elapsed = now - noonTime - windowMs;
     const progress = elapsed / (duration - 2 * windowMs);
     
@@ -210,33 +234,49 @@ function polarDayLabel(now, times, midnight) {
     return 'Late Afternoon';
   }
   
-  // Partition between midnight and noon
-  if (now > midnightTime + windowMs || now < noonTime - windowMs) {
-    // Handle wraparound: convert to 0-24h range relative to midnight
-    let relativeMs = now - midnightTime;
+  // Partition between antinoon and noon (morning arc)
+  if (now > antiNoonTime + windowMs || now < noonTime - windowMs) {
+    // Handle wraparound: convert to 0-24h range relative to antinoon
+    let relativeMs = now - antiNoonTime;
     if (relativeMs < 0) relativeMs += 24 * 3600000;
     
-    const duration = 12 * 3600000; // midnight to noon is 12 hours
+    const duration = 12 * 3600000; // antinoon to noon is 12 hours
     const progress = relativeMs / duration;
     
-    if (progress < 1/3) return 'Late Night';
-    if (progress < 2/3) return 'Early Morning';
-    return 'Midmorning';
+    if (progress < 1/3) return 'Early Morning';
+    if (progress < 2/3) return 'Midmorning';
+    return 'Late Morning';
   }
   
   return 'Day';
 }
 
 /**
- * White nights: Skip astronomical twilight and night phases (D-26.2)
+ * White nights: sun sets but never reaches -18° — skip astronomical twilight and night phases.
+ * Adds Lingering Sun (sunset/sunrise overlap) and short-gap Twilight merging.
  */
-function whiteNightLabel(now, times) {
+function whiteNightLabel(now, times, windowMs) {
   const { sunrise, sunset, solarNoon } = times;
   
   const riseTime = sunrise.getTime();
   const setTime = sunset.getTime();
   const noonTime = solarNoon.getTime();
-  const windowMs = 15 * 60000;
+  
+  // Compute gap from sunset to next sunrise
+  // riseTime from SunCalc is the sunrise of the queried date; next sunrise ≈ +24h
+  const nextRise = riseTime + 24 * 3600000;
+  const twilightGap = (nextRise - windowMs) - (setTime + windowMs);
+  
+  // Lingering Sun: sunset and next sunrise windows overlap (sun barely grazes horizon)
+  if (twilightGap <= 0) {
+    // During the twilight arc (sunset through next sunrise), show Lingering Sun
+    if (now > setTime - windowMs || now < riseTime + windowMs) return 'Lingering Sun';
+  }
+  
+  // Short twilight gap (< 1.5h between windows): collapse to single Twilight phase
+  if (twilightGap < 90 * 60000) {
+    if (now > setTime + windowMs || now < riseTime - windowMs) return 'Twilight';
+  }
   
   // Sunrise (±15 min)
   if (Math.abs(now - riseTime) <= windowMs) return 'Sunrise';
@@ -267,13 +307,11 @@ function whiteNightLabel(now, times) {
   // Sunset (±15 min)
   if (Math.abs(now - setTime) <= windowMs) return 'Sunset';
   
-  // Twilight phase (sunset → sunrise, wrapping around midnight)
-  // Evening Twilight (sunset → midnight) and Morning Twilight (midnight → sunrise)
+  // Normal white nights twilight (gap ≥ 90 min): Evening or Morning Twilight
+  // Use proximity to determine which side of the twilight arc we're on
   if (now > setTime + windowMs || now < riseTime - windowMs) {
-    // Simple heuristic: if closer to sunset, evening twilight; if closer to sunrise, morning twilight
-    const toSunset = Math.abs(now - setTime);
-    const toSunrise = Math.abs(now - riseTime);
-    
+    const toSunset = now > setTime ? now - setTime : now + 24 * 3600000 - setTime;
+    const toSunrise = riseTime > now ? riseTime - now : riseTime + 24 * 3600000 - now;
     return toSunset < toSunrise ? 'Evening Twilight' : 'Morning Twilight';
   }
   
@@ -281,44 +319,113 @@ function whiteNightLabel(now, times) {
 }
 
 /**
- * Polar night: Use night labels or partition into Early/Late Night (D-26.4)
+ * Polar night: sun never rises but astronomical twilight exists (nightEnd/night valid).
+ * Sequence: Antimidnight ↔ Morning/Evening Twilight ↔ Dawn/Dusk ↔ Early/Late Night ↔ Midnight
  */
-function polarNightLabel(now, times, midnight) {
+function polarNightLabel(now, times, midnight, windowMs) {
   const { nightEnd, night, solarNoon } = times;
   
-  // If we have twilight events (nightEnd and night), partition twilight phases
-  if (nightEnd && night) {
-    const dawnTime = nightEnd.getTime();
-    const duskTime = night.getTime();
-    const windowMs = 15 * 60000;
-    
-    // Astronomical Dawn (±15 min)
-    if (Math.abs(now - dawnTime) <= windowMs) return 'Astronomical Dawn';
-    
-    // Astronomical Dusk (±15 min)
-    if (Math.abs(now - duskTime) <= windowMs) return 'Astronomical Dusk';
-    
-    // Twilight (between dawn and dusk)
-    if (now > dawnTime + windowMs && now < duskTime - windowMs) return 'Twilight';
+  if (!nightEnd || !night || !solarNoon) return 'Night';
+  
+  const dawnTime = nightEnd.getTime();   // astronomical dawn (-18°)
+  const duskTime = night.getTime();      // astronomical dusk (-18°)
+  const antiMidnightTime = solarNoon.getTime(); // solar noon = brightest moment = Antimidnight
+  const midnightTime = midnight ? midnight.getTime() : solarNoon.getTime() + 12 * 3600000;
+  
+  // Check Dawn/Dusk gap for merging
+  const twilightGap = (duskTime - windowMs) - (dawnTime + windowMs);
+  
+  // Overlap: Dawn and Dusk windows overlap → single Twilight phase for entire arc
+  if (twilightGap <= 0) {
+    if (now >= dawnTime - windowMs && now <= duskTime + windowMs) return 'Twilight';
+    // Night phases outside the overlap
+    if (Math.abs(now - midnightTime) <= windowMs) return 'Midnight';
+    if (now > duskTime + windowMs && now < midnightTime - windowMs) return 'Early Night';
+    if (now > midnightTime + windowMs && now < dawnTime - windowMs) return 'Late Night';
+    return 'Night';
   }
   
-  // Deep night: partition into Early Night → Midnight → Late Night
-  if (midnight) {
-    const midnightTime = midnight.getTime();
-    const windowMs = 15 * 60000;
-    
+  // Short twilight gap (< 1.5h): collapse Morning Twilight + Antimidnight + Evening Twilight → Twilight
+  if (twilightGap < 90 * 60000) {
+    // Dawn and Dusk event windows still shown
+    if (Math.abs(now - dawnTime) <= windowMs) return 'Dawn';
+    if (Math.abs(now - duskTime) <= windowMs) return 'Dusk';
+    // Entire arc between dawn and dusk → Twilight
+    if (now > dawnTime + windowMs && now < duskTime - windowMs) return 'Twilight';
+    // Night phases
     if (Math.abs(now - midnightTime) <= windowMs) return 'Midnight';
-    
-    // Before midnight: Early Night; after midnight: Late Night
-    if (now < midnightTime - windowMs) return 'Early Night';
-    if (now > midnightTime + windowMs) return 'Late Night';
+    if (now > duskTime + windowMs && now < midnightTime - windowMs) return 'Early Night';
+    if (now > midnightTime + windowMs && now < dawnTime - windowMs) return 'Late Night';
+    return 'Night';
   }
+  
+  // Normal polar night with well-separated Dawn and Dusk
+  
+  // Antimidnight (±15 min around solar noon)
+  if (Math.abs(now - antiMidnightTime) <= windowMs) return 'Antimidnight';
+  
+  // Dawn (±15 min around nightEnd)
+  if (Math.abs(now - dawnTime) <= windowMs) return 'Dawn';
+  
+  // Dusk (±15 min around night)
+  if (Math.abs(now - duskTime) <= windowMs) return 'Dusk';
+  
+  // Morning Twilight: from after Dawn window to Antimidnight window
+  if (now > dawnTime + windowMs && now < antiMidnightTime - windowMs) return 'Morning Twilight';
+  
+  // Evening Twilight: from after Antimidnight window to before Dusk window
+  if (now > antiMidnightTime + windowMs && now < duskTime - windowMs) return 'Evening Twilight';
+  
+  // Early Night: after Dusk window until Midnight window
+  if (now > duskTime + windowMs && now < midnightTime - windowMs) return 'Early Night';
+  
+  // Midnight (±15 min)
+  if (Math.abs(now - midnightTime) <= windowMs) return 'Midnight';
+  
+  // Late Night: after Midnight window until next Dawn window
+  // Dawn may fall earlier in the calendar day than Midnight (e.g. dawn at 06:38, midnight at 22:59),
+  // so use dawnTime + 24h as the upper boundary to avoid an empty range.
+  const nextDayDawnPolar = dawnTime + 24 * 3600000;
+  if (now > midnightTime + windowMs && now < nextDayDawnPolar - windowMs) return 'Late Night';
   
   return 'Night';
 }
 
 /**
- * Altitude fallback: simplified 3-band system (D-27)
+ * Complete polar night: sun always below -18°, no twilight events.
+ * 4-phase only: Antimidnight, Early Night, Midnight, Late Night
+ */
+function completePolarNightLabel(now, times, midnight) {
+  const { solarNoon } = times;
+  if (!solarNoon) return 'Night';
+  
+  const antiMidnightTime = solarNoon.getTime();
+  const midnightTime = midnight ? midnight.getTime() : solarNoon.getTime() + 12 * 3600000;
+  const windowMs = 15 * 60000;
+  
+  // Antimidnight (±15 min around solar noon — brightest but still dark moment)
+  if (Math.abs(now - antiMidnightTime) <= windowMs) return 'Antimidnight';
+  
+  // Midnight (±15 min)
+  if (Math.abs(now - midnightTime) <= windowMs) return 'Midnight';
+  
+  // Early Night: after Antimidnight window until Midnight window
+  if (now > antiMidnightTime + windowMs && now < midnightTime - windowMs) return 'Early Night';
+  
+  // Late Night: after Midnight window until next Antimidnight window
+  // Handle wraparound
+  const nextAntiMidnight = antiMidnightTime + 24 * 3600000;
+  if (now > midnightTime + windowMs && now < nextAntiMidnight - windowMs) return 'Late Night';
+  
+  // Also handle if we're before today's antimidnight (coming from yesterday's late night)
+  const prevMidnight = midnightTime - 24 * 3600000;
+  if (now > prevMidnight + windowMs && now < antiMidnightTime - windowMs) return 'Late Night';
+  
+  return 'Night';
+}
+
+/**
+ * Altitude fallback: simplified 3-band system
  */
 function altitudeFallback(date, latitude, longitude) {
   try {

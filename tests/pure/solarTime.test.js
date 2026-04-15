@@ -99,6 +99,16 @@ describe('solarTime chronometer', () => {
   });
 
   describe('Edge cases', () => {
+    it('carries rounded minutes into the next hour instead of producing minute 60', () => {
+      const result = compute(new Date('2026-04-15T00:00:00Z'), { latitude: 0, longitude: -180 });
+
+      expect(result).toMatchObject({
+        hours: 12,
+        minutes: 0,
+        totalMinutes: 720
+      });
+    });
+
     it('normalizes time to 0-1440 range when crossing midnight', () => {
       const result = compute(new Date('2026-04-14T23:30:00Z'), { latitude: 0, longitude: 30 });
       

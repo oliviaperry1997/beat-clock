@@ -52,33 +52,137 @@ export function lerpColor(colorA, colorB, t) {
   return rgbToHex(r, g, b);
 }
 
-function getSkyPhase(date, times) {
+// Check if a SunCalc date is valid (SunCalc returns Invalid Date, not null, for missing events)
+function isValidDate(d) {
+  return d instanceof Date && !isNaN(d.getTime());
+}
+
+function getSkyPhase(date, times, latitude, longitude) {
   const { sunrise, sunset, dawn, dusk, nauticalDawn, nauticalDusk, goldenHour, goldenHourEnd } = times;
 
-  // If any required times are invalid, default to deep-night
-  if (!sunrise || !sunset || !dawn || !dusk || !nauticalDawn || !nauticalDusk) {
-    return { phase: 'deep-night', progress: 0 };
-  }
+  const hasSunrise     = isValidDate(sunrise);
+  const hasSunset      = isValidDate(sunset);
+  const hasNauticalDawn = isValidDate(nauticalDawn);
+  const hasNauticalDusk = isValidDate(nauticalDusk);
+  const hasDawn        = isValidDate(dawn);
+  const hasDusk        = isValidDate(dusk);
+  const hasNight       = isValidDate(times.night);
+  const hasNightEnd    = isValidDate(times.nightEnd);
 
   const t = date.getTime();
 
-  // Suncalc returns times for the calendar date at the given location.
-  // Evening events (goldenHour, sunset, etc.) may be on the next UTC day.
-  // Morning events (nauticalDawn, dawn, etc.) are on the current UTC day.
-  // When current UTC time is between these two groups, we're in the
-  // "post-midnight, pre-dawn" window and should use today's morning events.
-  // When current UTC time is after morning events but before evening events,
-  // we're in daytime.
+  // ── Polar day: no sunrise/sunset/night events at all ──────────────────────
+  // Use sun altitude to pick between day and golden-hour
+  if (!hasSunrise && !hasSunset && !hasNightEnd && !hasNight && !hasNauticalDawn && !hasNauticalDusk) {
+    const pos = SunCalc.getPosition(date, latitude, longitude);
+    const altDeg = pos.altitude * (180 / Math.PI);
+    if (altDeg >= 6) {
+      return { phase: 'day', progress: Math.min(1, (altDeg - 6) / 29) };
+    }
+    // Low sun (near antinoon, sun skims near horizon)
+    return { phase: 'golden-hour', progress: Math.max(0, altDeg / 6) };
+  }
+
+  // ── Polar night (no sunrise/sunset) with nautical or civil twilight ────────
+  if (!hasSunrise && !hasSunset) {
+    // Partial polar night: civil twilight available (dawn/dusk valid)
+    if (hasDawn && hasDusk) {
+      const nightEndT    = hasNightEnd   ? times.nightEnd.getTime()   : null;
+      const nautDawnT    = hasNauticalDawn ? nauticalDawn.getTime()   : null;
+      const dawnT        = dawn.getTime();
+      const duskT        = dusk.getTime();
+      const nautDuskT    = hasNauticalDusk ? nauticalDusk.getTime()   : null;
+      const nightT       = hasNight      ? times.night.getTime()      : null;
+
+      if (nightEndT !== null && t >= nightEndT && (nautDawnT === null || t < nautDawnT))
+        return { phase: 'astronomical-twilight', progress: nautDawnT ? (t - nightEndT) / (nautDawnT - nightEndT) : 0.5 };
+      if (nautDawnT !== null && t >= nautDawnT && t < dawnT)
+        return { phase: 'astronomical-twilight', progress: (t - nautDawnT) / (dawnT - nautDawnT) };
+      if (t >= dawnT && t <= duskT)
+        return { phase: 'civil-dawn-dusk', progress: (t - dawnT) / (duskT - dawnT) };
+      if (nautDuskT !== null && t > duskT && t <= nautDuskT)
+        return { phase: 'astronomical-twilight', progress: (t - duskT) / (nautDuskT - duskT) };
+      if (nightT !== null && nautDuskT !== null && t > nautDuskT && t <= nightT)
+        return { phase: 'astronomical-twilight', progress: (t - nautDuskT) / (nightT - nautDuskT) };
+      return { phase: 'deep-night', progress: 0 };
+    }
+
+    // Polar night with nautical twilight only (no civil dawn/dusk)
+    if (hasNauticalDawn && hasNauticalDusk) {
+      const nightEndT  = hasNightEnd   ? times.nightEnd.getTime()  : null;
+      const nautDawnT  = nauticalDawn.getTime();
+      const nautDuskT  = nauticalDusk.getTime();
+      const nightT     = hasNight      ? times.night.getTime()     : null;
+
+      if (nightEndT !== null && t >= nightEndT && t < nautDawnT)
+        return { phase: 'astronomical-twilight', progress: (t - nightEndT) / (nautDawnT - nightEndT) };
+      if (t >= nautDawnT && t <= nautDuskT)
+        return { phase: 'astronomical-twilight', progress: (t - nautDawnT) / (nautDuskT - nautDawnT) };
+      if (nightT !== null && t > nautDuskT && t <= nightT)
+        return { phase: 'astronomical-twilight', progress: (t - nautDuskT) / (nightT - nautDuskT) };
+      return { phase: 'deep-night', progress: 0 };
+    }
+
+    // Astronomical twilight only (nightEnd/night valid, nothing brighter)
+    if (hasNightEnd && hasNight) {
+      const nightEndT = times.nightEnd.getTime();
+      const nightT    = times.night.getTime();
+      if (t >= nightEndT && t <= nightT)
+        return { phase: 'astronomical-twilight', progress: (t - nightEndT) / (nightT - nightEndT) };
+      return { phase: 'deep-night', progress: 0 };
+    }
+
+    // Complete polar night — no twilight at all
+    return { phase: 'deep-night', progress: 0 };
+  }
+
+  // ── White nights: sunrise/sunset valid but no astronomical night ──────────
+  // The normal phase logic works for daytime. For the short night window,
+  // clamp to at worst civil-dawn-dusk (sun never goes below -18°).
+  if (hasSunrise && hasSunset && !hasNight) {
+    // Try the normal daytime phases first
+    if (isValidDate(goldenHourEnd) && isValidDate(goldenHour)) {
+      if (t >= goldenHourEnd.getTime() && t < goldenHour.getTime()) {
+        return { phase: 'day', progress: (t - goldenHourEnd.getTime()) / (goldenHour.getTime() - goldenHourEnd.getTime()) };
+      }
+      if (t >= goldenHour.getTime() && t < sunset.getTime()) {
+        return { phase: 'golden-hour', progress: (t - goldenHour.getTime()) / (sunset.getTime() - goldenHour.getTime()) };
+      }
+      if (t >= sunrise.getTime() && t < goldenHourEnd.getTime()) {
+        return { phase: 'golden-hour', progress: (t - sunrise.getTime()) / (goldenHourEnd.getTime() - sunrise.getTime()) };
+      }
+    }
+    // For the twilight window (outside sunrise→sunset), use altitude to determine phase
+    // Sun never goes below -18° in white nights, so deepest is astronomical-twilight
+    if (hasDawn && hasDusk) {
+      if (t >= dawn.getTime() && t < sunrise.getTime())
+        return { phase: 'civil-dawn-dusk', progress: (t - dawn.getTime()) / (sunrise.getTime() - dawn.getTime()) };
+      if (t > sunset.getTime() && t <= dusk.getTime())
+        return { phase: 'civil-dawn-dusk', progress: (t - sunset.getTime()) / (dusk.getTime() - sunset.getTime()) };
+    }
+    // Remaining twilight: clamp to civil-dawn-dusk minimum
+    const pos = SunCalc.getPosition(date, latitude, longitude);
+    const altDeg = pos.altitude * (180 / Math.PI);
+    if (altDeg >= -6) return { phase: 'civil-dawn-dusk', progress: 0.5 };
+    return { phase: 'astronomical-twilight', progress: 0.5 };
+  }
+
+  // ── Normal solar cycle ────────────────────────────────────────────────────
+  // Require all key events to be valid
+  if (!hasSunrise || !hasSunset || !isValidDate(dawn) || !isValidDate(dusk) ||
+      !isValidDate(nauticalDawn) || !isValidDate(nauticalDusk)) {
+    return { phase: 'deep-night', progress: 0 };
+  }
 
   // Check if current time is in the "day" window: after morning goldenHourEnd
   // but before evening goldenHour (which may be next UTC day).
-  if (t >= goldenHourEnd.getTime() && t < goldenHour.getTime()) {
-    // Full day phase
+  if (isValidDate(goldenHourEnd) && isValidDate(goldenHour) &&
+      t >= goldenHourEnd.getTime() && t < goldenHour.getTime()) {
     return { phase: 'day', progress: (t - goldenHourEnd.getTime()) / (goldenHour.getTime() - goldenHourEnd.getTime()) };
   }
 
   // Evening phases (goldenHour → sunset → dusk → nauticalDusk → night)
-  if (t >= goldenHour.getTime() && t < sunset.getTime()) {
+  if (isValidDate(goldenHour) && t >= goldenHour.getTime() && t < sunset.getTime()) {
     return { phase: 'golden-hour', progress: (t - goldenHour.getTime()) / (sunset.getTime() - goldenHour.getTime()) };
   }
   if (t >= sunset.getTime() && t < dusk.getTime()) {
@@ -87,12 +191,12 @@ function getSkyPhase(date, times) {
   if (t >= dusk.getTime() && t < nauticalDusk.getTime()) {
     return { phase: 'astronomical-twilight', progress: (t - dusk.getTime()) / (nauticalDusk.getTime() - dusk.getTime()) };
   }
-  if (t >= nauticalDusk.getTime() && t < times.night.getTime()) {
+  if (isValidDate(times.night) && t >= nauticalDusk.getTime() && t < times.night.getTime()) {
     return { phase: 'deep-night', progress: (t - nauticalDusk.getTime()) / (times.night.getTime() - nauticalDusk.getTime()) };
   }
 
   // Night phases (night → nauticalDawn → dawn → sunrise → goldenHourEnd)
-  if (t >= times.night.getTime() && t < nauticalDawn.getTime()) {
+  if (isValidDate(times.night) && t >= times.night.getTime() && t < nauticalDawn.getTime()) {
     return { phase: 'deep-night', progress: (t - times.night.getTime()) / (nauticalDawn.getTime() - times.night.getTime()) };
   }
   if (t >= nauticalDawn.getTime() && t < dawn.getTime()) {
@@ -101,7 +205,7 @@ function getSkyPhase(date, times) {
   if (t >= dawn.getTime() && t < sunrise.getTime()) {
     return { phase: 'civil-dawn-dusk', progress: (t - dawn.getTime()) / (sunrise.getTime() - dawn.getTime()) };
   }
-  if (t >= sunrise.getTime() && t < goldenHourEnd.getTime()) {
+  if (isValidDate(goldenHourEnd) && t >= sunrise.getTime() && t < goldenHourEnd.getTime()) {
     return { phase: 'golden-hour', progress: (t - sunrise.getTime()) / (goldenHourEnd.getTime() - sunrise.getTime()) };
   }
 
@@ -124,8 +228,9 @@ export function getSkyGradientColors(date, latitude, longitude) {
   // Suncalc returns events for the calendar date at the location.
   // Evening events (goldenHour, sunset...) may land on the next UTC day.
   // If current time is before morning events, use yesterday's evening events.
+  // Use isValidDate() — SunCalc returns Invalid Date (truthy) for missing polar events.
   let eveningTimes = times;
-  if (times.nauticalDawn && date < times.nauticalDawn) {
+  if (isValidDate(times.nauticalDawn) && date < times.nauticalDawn) {
     const yesterday = new Date(date.getTime() - 86400000);
     eveningTimes = SunCalc.getTimes(yesterday, latitude, longitude);
   }
@@ -137,13 +242,14 @@ export function getSkyGradientColors(date, latitude, longitude) {
     dusk: eveningTimes.dusk,
     nauticalDusk: eveningTimes.nauticalDusk,
     night: eveningTimes.night,
+    nightEnd: times.nightEnd,
     nauticalDawn: times.nauticalDawn,
     dawn: times.dawn,
     sunrise: times.sunrise,
     goldenHourEnd: times.goldenHourEnd,
   };
 
-  const { phase, progress } = getSkyPhase(date, phaseTimes);
+  const { phase, progress } = getSkyPhase(date, phaseTimes, latitude, longitude);
 
   // Clamp progress to 0-1
   const t = Math.max(0, Math.min(1, progress || 0));

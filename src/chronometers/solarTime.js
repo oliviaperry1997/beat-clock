@@ -31,9 +31,9 @@ export function compute(date, opts = {}) {
   const solarMinutes = utcMinutes + totalOffsetMin;
   const normalized = ((solarMinutes % 1440) + 1440) % 1440;
 
-  const hours = Math.floor(normalized / 60);
-  const minutes = Math.round(normalized % 60);
-  const totalMinutes = hours * 60 + minutes;
+  const totalMinutes = Math.round(normalized) % 1440;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
   const degrees = (totalMinutes / 1440) * 360;
 
   return { hours, minutes, totalMinutes, degrees };

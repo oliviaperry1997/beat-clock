@@ -155,16 +155,16 @@ describe('Solar Time Description Mapping', () => {
       expect(result).toBe('Evening Twilight');
     });
 
-    it('returns Astronomical Dawn at nightEnd time', () => {
+    it('returns Dawn at nightEnd time', () => {
       const times = SunCalc.getTimes(baseDate, lat, lon);
       const result = getDescription(times.nightEnd, lat, lon);
-      expect(result).toBe('Astronomical Dawn');
+      expect(result).toBe('Dawn');
     });
 
-    it('returns Astronomical Dusk at night time', () => {
+    it('returns Dusk at night time', () => {
       const times = SunCalc.getTimes(baseDate, lat, lon);
       const result = getDescription(times.night, lat, lon);
-      expect(result).toBe('Astronomical Dusk');
+      expect(result).toBe('Dusk');
     });
 
     it('returns Early Night after astronomical dusk', () => {
@@ -192,6 +192,89 @@ describe('Solar Time Description Mapping', () => {
     });
   });
 
+  describe('Normal solar cycle — short day compression', () => {
+    // Murmansk Dec 1: sunrise ~09:14, sunset ~10:01, total day ~47 min
+    // dayGap = (10:01 - 15min) - (09:14 + 15min) = 09:46 - 09:29 = 17 min < 90 min → Day
+    const lat = 68.97;
+    const lon = 33.07;
+    const baseDate = new Date('2026-12-01T12:00:00Z');
+
+    it('returns Day at solar noon during very short day', () => {
+      const times = SunCalc.getTimes(baseDate, lat, lon);
+      // Verify this location/date has sunrise and sunset (not polar night)
+      if (!isNaN(times.sunrise?.getTime()) && !isNaN(times.sunset?.getTime())) {
+        const result = getDescription(times.solarNoon, lat, lon);
+        expect(result).toBe('Day');
+      }
+    });
+
+    it('returns Day between sunrise and sunset windows during very short day', () => {
+      const times = SunCalc.getTimes(baseDate, lat, lon);
+      if (!isNaN(times.sunrise?.getTime()) && !isNaN(times.sunset?.getTime())) {
+        // Midpoint between sunrise and sunset
+        const mid = new Date((times.sunrise.getTime() + times.sunset.getTime()) / 2);
+        const result = getDescription(mid, lat, lon);
+        expect(result).toBe('Day');
+      }
+    });
+
+    it('still returns Sunrise at sunrise event during short day', () => {
+      const times = SunCalc.getTimes(baseDate, lat, lon);
+      if (!isNaN(times.sunrise?.getTime())) {
+        const result = getDescription(times.sunrise, lat, lon);
+        expect(result).toBe('Sunrise');
+      }
+    });
+
+    it('still returns Sunset at sunset event during short day', () => {
+      const times = SunCalc.getTimes(baseDate, lat, lon);
+      if (!isNaN(times.sunset?.getTime())) {
+        const result = getDescription(times.sunset, lat, lon);
+        expect(result).toBe('Sunset');
+      }
+    });
+  });
+
+  describe('Normal solar cycle — Morning/Afternoon compression', () => {
+    // Find a location/date where morning gap is < 90 min but day is not fully compressed
+    // At lat ~60-65N in November, days are short enough to trigger Morning/Afternoon compression
+    // but not Day compression. Let's use lat=63N Nov 20.
+    const lat = 63;
+    const lon = 25;
+    const baseDate = new Date('2026-11-20T12:00:00Z');
+
+    it('returns Morning when morning gap < 90 min and current time is in morning arc', () => {
+      const times = SunCalc.getTimes(baseDate, lat, lon);
+      if (!isNaN(times.sunrise?.getTime()) && !isNaN(times.solarNoon?.getTime())) {
+        const windowMs = 15 * 60000;
+        const riseTime = times.sunrise.getTime();
+        const noonTime = times.solarNoon.getTime();
+        const morningGap = (noonTime - windowMs) - (riseTime + windowMs);
+        // Only test if compression actually applies
+        if (morningGap < 90 * 60000 && morningGap > 0) {
+          const midMorning = new Date(riseTime + windowMs + morningGap / 2);
+          const result = getDescription(midMorning, lat, lon);
+          expect(result).toBe('Morning');
+        }
+      }
+    });
+
+    it('returns Afternoon when afternoon gap < 90 min and current time is in afternoon arc', () => {
+      const times = SunCalc.getTimes(baseDate, lat, lon);
+      if (!isNaN(times.sunset?.getTime()) && !isNaN(times.solarNoon?.getTime())) {
+        const windowMs = 15 * 60000;
+        const noonTime = times.solarNoon.getTime();
+        const setTime = times.sunset.getTime();
+        const afternoonGap = (setTime - windowMs) - (noonTime + windowMs);
+        if (afternoonGap < 90 * 60000 && afternoonGap > 0) {
+          const midAfternoon = new Date(noonTime + windowMs + afternoonGap / 2);
+          const result = getDescription(midAfternoon, lat, lon);
+          expect(result).toBe('Afternoon');
+        }
+      }
+    });
+  });
+
   describe('Polar day edge case', () => {
     // Test location: 78°N, 15°E (Svalbard), Date: June 21, 2026
     const lat = 78;
@@ -204,11 +287,11 @@ describe('Solar Time Description Mapping', () => {
       expect(result).toBe('Noon');
     });
 
-    it('returns Midnight at computed midnight during polar day', () => {
+    it('returns Antinoon at computed anti-noon (solar noon + 12h) during polar day', () => {
       const times = SunCalc.getTimes(baseDate, lat, lon);
-      const midnight = new Date(times.solarNoon.getTime() + 12 * 3600000);
-      const result = getDescription(midnight, lat, lon);
-      expect(result).toBe('Midnight');
+      const antinoon = new Date(times.solarNoon.getTime() + 12 * 3600000);
+      const result = getDescription(antinoon, lat, lon);
+      expect(result).toBe('Antinoon');
     });
 
     it('returns afternoon phase during polar day afternoon', () => {
@@ -225,27 +308,33 @@ describe('Solar Time Description Mapping', () => {
       const result = getDescription(testTime, lat, lon);
       expect(result).not.toBe('Sunset');
       expect(result).not.toBe('Evening Twilight');
-      expect(result).not.toBe('Astronomical Dusk');
+      expect(result).not.toBe('Dusk');
+    });
+
+    it('does not return Midnight during polar day', () => {
+      const times = SunCalc.getTimes(baseDate, lat, lon);
+      const antinoon = new Date(times.solarNoon.getTime() + 12 * 3600000);
+      const result = getDescription(antinoon, lat, lon);
+      expect(result).not.toBe('Midnight');
+      expect(result).toBe('Antinoon');
     });
 
     it('does not return night labels during polar day', () => {
-      // Test multiple times throughout the "night"
       const times = SunCalc.getTimes(baseDate, lat, lon);
-      const midnight = new Date(times.solarNoon.getTime() + 12 * 3600000);
-      
+      const antinoon = new Date(times.solarNoon.getTime() + 12 * 3600000);
       for (let offset = 1; offset <= 5; offset++) {
-        const testTime = new Date(midnight.getTime() + offset * 3600000);
+        const testTime = new Date(antinoon.getTime() + offset * 3600000);
         const result = getDescription(testTime, lat, lon);
         expect(result).not.toBe('Night');
-        // Morning labels are OK during polar day
+        expect(result).not.toBe('Midnight');
       }
     });
 
     it('returns morning or afternoon labels throughout polar day', () => {
       const times = SunCalc.getTimes(baseDate, lat, lon);
-      const testTime = new Date(times.solarNoon.getTime() + 18 * 3600000); // 6 AM next day (solar time)
+      const testTime = new Date(times.solarNoon.getTime() + 18 * 3600000); // 6 AM next solar day
       const result = getDescription(testTime, lat, lon);
-      const validLabels = ['Early Morning', 'Midmorning', 'Late Morning', 'Early Afternoon', 'Midafternoon', 'Late Afternoon', 'Noon', 'Midnight', 'Late Night'];
+      const validLabels = ['Early Morning', 'Midmorning', 'Late Morning', 'Early Afternoon', 'Midafternoon', 'Late Afternoon', 'Noon', 'Antinoon'];
       expect(validLabels).toContain(result);
     });
   });
@@ -274,7 +363,6 @@ describe('Solar Time Description Mapping', () => {
 
     it('returns twilight labels during night hours in white nights', () => {
       const times = SunCalc.getTimes(baseDate, lat, lon);
-      // If white nights condition exists (sunrise/sunset but no nightEnd/night)
       const hasWhiteNights = times.sunrise && times.sunset && 
                            (!times.nightEnd || isNaN(times.nightEnd.getTime())) &&
                            (!times.night || isNaN(times.night.getTime()));
@@ -286,7 +374,7 @@ describe('Solar Time Description Mapping', () => {
       }
     });
 
-    it('does not return Astronomical Dawn during white nights', () => {
+    it('does not return Dawn during white nights', () => {
       const times = SunCalc.getTimes(baseDate, lat, lon);
       const hasWhiteNights = times.sunrise && times.sunset && 
                            (!times.nightEnd || isNaN(times.nightEnd.getTime())) &&
@@ -295,11 +383,11 @@ describe('Solar Time Description Mapping', () => {
       if (hasWhiteNights && times.sunrise) {
         const testTime = new Date(times.sunrise.getTime() - 2 * 3600000); // 2h before sunrise
         const result = getDescription(testTime, lat, lon);
-        expect(result).not.toBe('Astronomical Dawn');
+        expect(result).not.toBe('Dawn');
       }
     });
 
-    it('does not return Astronomical Dusk during white nights', () => {
+    it('does not return Dusk during white nights', () => {
       const times = SunCalc.getTimes(baseDate, lat, lon);
       const hasWhiteNights = times.sunrise && times.sunset && 
                            (!times.nightEnd || isNaN(times.nightEnd.getTime())) &&
@@ -308,7 +396,7 @@ describe('Solar Time Description Mapping', () => {
       if (hasWhiteNights && times.sunset) {
         const testTime = new Date(times.sunset.getTime() + 2 * 3600000); // 2h after sunset
         const result = getDescription(testTime, lat, lon);
-        expect(result).not.toBe('Astronomical Dusk');
+        expect(result).not.toBe('Dusk');
       }
     });
 
@@ -328,17 +416,63 @@ describe('Solar Time Description Mapping', () => {
     });
   });
 
+  describe('White nights — short gap (Twilight merge)', () => {
+    // At lat=65°N, June 21: twilight gap ~88 min < 90 min → should merge to 'Twilight'
+    const lat = 65;
+    const lon = 25;
+    const baseDate = new Date('2026-06-21T12:00:00Z');
+
+    it('returns Twilight during night hours when twilight gap < 90 min', () => {
+      const times = SunCalc.getTimes(baseDate, lat, lon);
+      const hasWhiteNights = times.sunrise && !isNaN(times.sunrise.getTime()) &&
+                             times.sunset && !isNaN(times.sunset.getTime()) &&
+                             (!times.nightEnd || isNaN(times.nightEnd.getTime())) &&
+                             (!times.night || isNaN(times.night.getTime()));
+      if (hasWhiteNights) {
+        // Time midway between sunset and next sunrise
+        const midTwilight = new Date(times.sunset.getTime() + 1 * 3600000);
+        const result = getDescription(midTwilight, lat, lon);
+        expect(result).toBe('Twilight');
+      }
+    });
+  });
+
+  describe('White nights — Lingering Sun', () => {
+    // At lat=65.7°N, June 21: twilight gap is negative (sunset/next sunrise overlap)
+    const lat = 65.7;
+    const lon = 25;
+    const baseDate = new Date('2026-06-21T12:00:00Z');
+
+    it('returns Lingering Sun when sunset and next sunrise overlap', () => {
+      const times = SunCalc.getTimes(baseDate, lat, lon);
+      const hasSunrise = times.sunrise && !isNaN(times.sunrise.getTime());
+      const hasSunset = times.sunset && !isNaN(times.sunset.getTime());
+      const noNight = !times.nightEnd || isNaN(times.nightEnd.getTime());
+      
+      if (hasSunrise && hasSunset && noNight) {
+        const W = 15 * 60000;
+        const nextRise = times.sunrise.getTime() + 24 * 3600000;
+        const gap = (nextRise - W) - (times.sunset.getTime() + W);
+        // Only test if this actually is a Lingering Sun case
+        if (gap <= 0) {
+          const testTime = new Date(times.sunset.getTime() + 15 * 60000);
+          const result = getDescription(testTime, lat, lon);
+          expect(result).toBe('Lingering Sun');
+        }
+      }
+    });
+  });
+
   describe('Polar night edge case', () => {
     // Test location: 78°N, 15°E (Svalbard), Date: December 21, 2026
     const lat = 78;
     const lon = 15;
     const baseDate = new Date('2026-12-21T12:00:00Z');
 
-    it('returns night-related label during polar night', () => {
+    it('returns Antimidnight at solar noon during polar night', () => {
       const times = SunCalc.getTimes(baseDate, lat, lon);
       const result = getDescription(times.solarNoon, lat, lon);
-      const validLabels = ['Night', 'Early Night', 'Late Night', 'Midnight', 'Twilight', 'Astronomical Dawn', 'Astronomical Dusk'];
-      expect(validLabels).toContain(result);
+      expect(result).toBe('Antimidnight');
     });
 
     it('does not return Sunrise during polar night', () => {
@@ -368,21 +502,41 @@ describe('Solar Time Description Mapping', () => {
       expect(result).not.toBe('Late Afternoon');
     });
 
-    it('may return Astronomical Dawn if twilight exists', () => {
+    it('returns Dawn at nightEnd time during polar night', () => {
       const times = SunCalc.getTimes(baseDate, lat, lon);
-      // Check if twilight events exist during polar night
       if (times.nightEnd && !isNaN(times.nightEnd.getTime())) {
         const result = getDescription(times.nightEnd, lat, lon);
-        expect(result).toBe('Astronomical Dawn');
+        expect(result).toBe('Dawn');
       }
     });
 
-    it('may return Astronomical Dusk if twilight exists', () => {
+    it('returns Dusk at astronomical dusk time during polar night', () => {
       const times = SunCalc.getTimes(baseDate, lat, lon);
-      // Check if twilight events exist during polar night
       if (times.night && !isNaN(times.night.getTime())) {
         const result = getDescription(times.night, lat, lon);
-        expect(result).toBe('Astronomical Dusk');
+        expect(result).toBe('Dusk');
+      }
+    });
+
+    it('returns Morning Twilight between Dawn and Antimidnight', () => {
+      const times = SunCalc.getTimes(baseDate, lat, lon);
+      if (times.nightEnd && !isNaN(times.nightEnd.getTime())) {
+        const windowMs = 15 * 60000;
+        // Midpoint between Dawn and solar noon
+        const midTwilight = new Date(times.nightEnd.getTime() + windowMs + 30 * 60000);
+        const result = getDescription(midTwilight, lat, lon);
+        expect(result).toBe('Morning Twilight');
+      }
+    });
+
+    it('returns Evening Twilight between Antimidnight and Dusk', () => {
+      const times = SunCalc.getTimes(baseDate, lat, lon);
+      if (times.night && !isNaN(times.night.getTime())) {
+        const windowMs = 15 * 60000;
+        // Time between solar noon and Dusk
+        const midTwilight = new Date(times.solarNoon.getTime() + windowMs + 30 * 60000);
+        const result = getDescription(midTwilight, lat, lon);
+        expect(result).toBe('Evening Twilight');
       }
     });
 
@@ -391,6 +545,93 @@ describe('Solar Time Description Mapping', () => {
       const midnight = new Date(times.solarNoon.getTime() + 12 * 3600000);
       const result = getDescription(midnight, lat, lon);
       expect(result).toBe('Midnight');
+    });
+
+    it('returns Early Night between Dusk and Midnight', () => {
+      const times = SunCalc.getTimes(baseDate, lat, lon);
+      if (times.night && !isNaN(times.night.getTime())) {
+        const midnight = new Date(times.solarNoon.getTime() + 12 * 3600000);
+        const windowMs = 15 * 60000;
+        const midNight = new Date(times.night.getTime() + windowMs + 30 * 60000);
+        const result = getDescription(midNight, lat, lon);
+        expect(result).toBe('Early Night');
+      }
+    });
+
+    it('returns Late Night between Midnight and Dawn', () => {
+      const times = SunCalc.getTimes(baseDate, lat, lon);
+      if (times.nightEnd && !isNaN(times.nightEnd.getTime())) {
+        const midnight = new Date(times.solarNoon.getTime() + 12 * 3600000);
+        const windowMs = 15 * 60000;
+        // 30 min after midnight window
+        const lateNight = new Date(midnight.getTime() + windowMs + 30 * 60000);
+        const result = getDescription(lateNight, lat, lon);
+        expect(result).toBe('Late Night');
+      }
+    });
+  });
+
+  describe('Complete polar night (no twilight)', () => {
+    // North Pole in December: sun far below -18°, no twilight events at all
+    const lat = 89;
+    const lon = 0;
+    const baseDate = new Date('2026-12-21T12:00:00Z');
+
+    it('returns Antimidnight at solar noon during complete polar night', () => {
+      const times = SunCalc.getTimes(baseDate, lat, lon);
+      // Verify complete polar night condition
+      const noTwilight = (!times.nightEnd || isNaN(times.nightEnd.getTime())) &&
+                         (!times.night || isNaN(times.night.getTime())) &&
+                         (!times.sunrise || isNaN(times.sunrise.getTime()));
+      if (noTwilight) {
+        const result = getDescription(times.solarNoon, lat, lon);
+        expect(result).toBe('Antimidnight');
+      }
+    });
+
+    it('returns Midnight at midnight during complete polar night', () => {
+      const times = SunCalc.getTimes(baseDate, lat, lon);
+      const noTwilight = (!times.nightEnd || isNaN(times.nightEnd.getTime())) &&
+                         (!times.night || isNaN(times.night.getTime())) &&
+                         (!times.sunrise || isNaN(times.sunrise.getTime()));
+      if (noTwilight) {
+        const midnight = new Date(times.solarNoon.getTime() + 12 * 3600000);
+        const result = getDescription(midnight, lat, lon);
+        expect(result).toBe('Midnight');
+      }
+    });
+
+    it('only returns 4-phase labels during complete polar night', () => {
+      const times = SunCalc.getTimes(baseDate, lat, lon);
+      const noTwilight = (!times.nightEnd || isNaN(times.nightEnd.getTime())) &&
+                         (!times.night || isNaN(times.night.getTime())) &&
+                         (!times.sunrise || isNaN(times.sunrise.getTime()));
+      if (noTwilight) {
+        const validLabels = ['Antimidnight', 'Early Night', 'Midnight', 'Late Night', 'Night'];
+        for (let h = 0; h < 24; h++) {
+          const testTime = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), h, 0, 0, 0);
+          const result = getDescription(testTime, lat, lon);
+          expect(validLabels).toContain(result);
+        }
+      }
+    });
+
+    it('does not return day or twilight labels during complete polar night', () => {
+      const times = SunCalc.getTimes(baseDate, lat, lon);
+      const noTwilight = (!times.nightEnd || isNaN(times.nightEnd.getTime())) &&
+                         (!times.night || isNaN(times.night.getTime())) &&
+                         (!times.sunrise || isNaN(times.sunrise.getTime()));
+      if (noTwilight) {
+        const testTime = times.solarNoon;
+        const result = getDescription(testTime, lat, lon);
+        expect(result).not.toBe('Dawn');
+        expect(result).not.toBe('Morning Twilight');
+        expect(result).not.toBe('Sunrise');
+        expect(result).not.toBe('Noon');
+        expect(result).not.toBe('Sunset');
+        expect(result).not.toBe('Evening Twilight');
+        expect(result).not.toBe('Dusk');
+      }
     });
   });
 
@@ -425,7 +666,7 @@ describe('Solar Time Description Mapping', () => {
   });
 
   describe('Label coverage', () => {
-    it('can return all 16 labels throughout a normal solar cycle', () => {
+    it('can return all core labels throughout a normal solar cycle', () => {
       const lat = 40;
       const lon = -74;
       const baseDate = new Date('2026-03-20T00:00:00Z');
