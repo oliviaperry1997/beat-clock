@@ -34,7 +34,7 @@ Requirements for Modular Datetime Formats milestone. Each maps to roadmap phases
 - [x] **SOLTIME-01**: User can display Solar Time in 24h local format (based on user's location sun position)
 - [x] **SOLTIME-02**: User can display Solar Time in Decimal format (local solar beats)
 - [x] **SOLTIME-03**: User can display Solar Time in Longitudinal format (solar angle-based time at chosen longitude — differs from Standard Time longitudinal by using actual sun position, not fixed meridian offset)
-- [ ] **SOLTIME-04**: User can display Solar Time in Descriptive format (time-of-day descriptions: golden hour, blue hour, civil twilight, nautical twilight, astronomical twilight, deep night, solar noon, day, etc.)
+- [x] **SOLTIME-04**: User can display Solar Time in Descriptive format (time-of-day descriptions: golden hour, blue hour, civil twilight, nautical twilight, astronomical twilight, deep night, solar noon, day, etc.)
 
 ### Format System
 
@@ -99,7 +99,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SOLTIME-01 | Phase 13 | Complete |
 | SOLTIME-02 | Phase 13 | Complete |
 | SOLTIME-03 | Phase 13 | Complete |
-| SOLTIME-04 | Phase 13 | Pending |
+| SOLTIME-04 | Phase 13 | Complete |
 | FORMAT-01 | Phase 14 | Pending |
 | FORMAT-02 | Phase 10 | Pending |
 | FORMAT-03 | Phase 14 | Pending |
