@@ -28,7 +28,11 @@ describe('composer integration', () => {
   it('includes solarTime in result', () => {
     const date = new Date(Date.UTC(2026, 2, 1));
     const result = compose(date, { latitude: 40.7, longitude: -74.0 });
-    expect(result.solarTime).toMatch(/^ST\d{2}:\d{2}$/);
+    expect(result.solarTime).toBeTypeOf('object');
+    expect(result.solarTime).toHaveProperty('hours');
+    expect(result.solarTime).toHaveProperty('minutes');
+    expect(result.solarTime).toHaveProperty('totalMinutes');
+    expect(result.solarTime).toHaveProperty('degrees');
   });
 
   it('includes meghalayan in result', () => {
@@ -56,7 +60,7 @@ describe('composer integration', () => {
     const result = compose(date, {});
     expect(result.solarLongitude).toBe('SL??');
     expect(result.lunarPhase).toBe('LP??');
-    expect(result.solarTime).toBe('ST??');
+    expect(result.solarTime).toBe(null); // returns null when location unavailable
     expect(result.meghalayan.stage).toBe('meghalayan'); // megahalayan doesn't need location
     expect(result.customEpoch).toBe('CE??');
   });
