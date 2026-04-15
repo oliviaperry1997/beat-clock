@@ -18,11 +18,42 @@ export function getDescription(date, latitude, longitude) {
   if (latitude == null || longitude == null) return 'Day';
   
   try {
-    // Get sun events for the date
-    const times = SunCalc.getTimes(date, latitude, longitude);
-    
     // Helper: check if event is valid
     const hasEvent = (event) => event && event instanceof Date && !isNaN(event.getTime());
+    
+    // Get current timestamp for comparison
+    const now = date.getTime();
+    
+    // Determine which solar day we're in
+    // Strategy: Solar day runs from noon to noon, but we need to handle the transition carefully.
+    // Use yesterday's cycle ONLY if we're clearly in yesterday's late-night phase
+    // (after yesterday's midnight, before today's dawn/twilight starts)
+    let times = SunCalc.getTimes(date, latitude, longitude);
+    const windowMs = 15 * 60000;
+    let nextDayDawn = null; // Track today's dawn for late-night phase when using yesterday's cycle
+    
+    // Check if we're in yesterday's late-night phase
+    // Only switch to yesterday if we're before today's astronomical dawn and not close to any morning events
+    // Skip this for polar day conditions (no nightEnd means no normal night cycle)
+    if (hasEvent(times.nightEnd)) {
+      const todayDawn = times.nightEnd.getTime();
+      // If we're more than a window before today's dawn, we might be in yesterday's late night
+      if (now < todayDawn - windowMs) {
+        const yesterday = new Date(date);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayTimes = SunCalc.getTimes(yesterday, latitude, longitude);
+        
+        // Use yesterday's cycle if it has valid night events and we're after its midnight
+        if (hasEvent(yesterdayTimes.solarNoon) && hasEvent(yesterdayTimes.night)) {
+          const yesterdayMidnight = new Date(yesterdayTimes.solarNoon.getTime() + 12 * 3600000);
+          // Use yesterday if we're after its midnight
+          if (now >= yesterdayMidnight.getTime() - windowMs) {
+            nextDayDawn = times.nightEnd; // Store today's dawn for late-night boundary
+            times = yesterdayTimes;
+          }
+        }
+      }
+    }
     
     // Extract event validity flags
     const hasSunrise = hasEvent(times.sunrise);
@@ -33,9 +64,6 @@ export function getDescription(date, latitude, longitude) {
     
     // Compute midnight as solar noon + 12 hours
     const midnight = hasSolarNoon ? new Date(times.solarNoon.getTime() + 12 * 3600000) : null;
-    
-    // Get current timestamp for comparison
-    const now = date.getTime();
     
     // Polar edge case detection (D-26)
     
@@ -56,7 +84,7 @@ export function getDescription(date, latitude, longitude) {
     
     // Case 4: Normal solar cycle (all day events present)
     if (hasSunrise && hasSunset && hasNightEnd && hasNight && hasSolarNoon) {
-      return normalSolarLabel(now, times, midnight);
+      return normalSolarLabel(now, times, midnight, nextDayDawn);
     }
     
     // Fallback: use altitude bands when event pattern doesn't match any case
@@ -70,7 +98,7 @@ export function getDescription(date, latitude, longitude) {
 /**
  * Normal solar cycle: 16-label event-anchored system (D-24)
  */
-function normalSolarLabel(now, times, midnight) {
+function normalSolarLabel(now, times, midnight, nextDayDawn = null) {
   const { sunrise, sunset, solarNoon, nightEnd, night } = times;
   
   // Convert events to timestamps
@@ -93,25 +121,25 @@ function normalSolarLabel(now, times, midnight) {
   // Sunrise (±15 min)
   if (Math.abs(now - riseTime) <= windowMs) return 'Sunrise';
   
-  // Daytime phases (sunrise → noon → sunset)
-  if (now > riseTime + windowMs && now < setTime - windowMs) {
-    const dayDuration = setTime - riseTime;
+  // Noon (±15 min) - check before partitioning day phases
+  if (Math.abs(now - noonTime) <= windowMs) return 'Noon';
+  
+  // Morning phases (sunrise → noon)
+  if (now > riseTime + windowMs && now < noonTime - windowMs) {
+    const morningDuration = noonTime - riseTime - 2 * windowMs;
     const elapsed = now - riseTime - windowMs;
-    const progress = elapsed / (dayDuration - 2 * windowMs);
+    const progress = elapsed / morningDuration;
     
     if (progress < 1/3) return 'Early Morning';
     if (progress < 2/3) return 'Midmorning';
     return 'Late Morning';
   }
   
-  // Noon (±15 min)
-  if (Math.abs(now - noonTime) <= windowMs) return 'Noon';
-  
   // Afternoon phases (noon → sunset)
   if (now > noonTime + windowMs && now < setTime - windowMs) {
-    const afternoonDuration = setTime - noonTime;
+    const afternoonDuration = setTime - noonTime - 2 * windowMs;
     const elapsed = now - noonTime - windowMs;
-    const progress = elapsed / (afternoonDuration - 2 * windowMs);
+    const progress = elapsed / afternoonDuration;
     
     if (progress < 1/3) return 'Early Afternoon';
     if (progress < 2/3) return 'Midafternoon';
@@ -127,19 +155,20 @@ function normalSolarLabel(now, times, midnight) {
   // Astronomical Dusk (±15 min)
   if (Math.abs(now - duskTime) <= windowMs) return 'Astronomical Dusk';
   
-  // Night phases (dusk → midnight → dawn)
-  if (now > duskTime + windowMs && now < dawn - windowMs) {
-    // Check which side of midnight we're on
-    if (now < midnightTime - windowMs) {
-      // Before midnight
-      return 'Early Night';
-    } else if (Math.abs(now - midnightTime) <= windowMs) {
-      // Midnight window (±15 min)
-      return 'Midnight';
-    } else {
-      // After midnight
-      return 'Late Night';
-    }
+  // Midnight (±15 min)
+  if (Math.abs(now - midnightTime) <= windowMs) return 'Midnight';
+  
+  // Night phases
+  // Early Night: after dusk window until midnight window
+  if (now > duskTime + windowMs && now < midnightTime - windowMs) {
+    return 'Early Night';
+  }
+  
+  // Late Night: after midnight window until next dawn window
+  // Use nextDayDawn if provided (when we switched to yesterday's cycle)
+  const endOfNight = nextDayDawn ? nextDayDawn.getTime() : dawn;
+  if (now > midnightTime + windowMs && now < endOfNight - windowMs) {
+    return 'Late Night';
   }
   
   // Default fallback (shouldn't reach here)
@@ -163,8 +192,12 @@ function polarDayLabel(now, times, midnight) {
   // Noon window (±15 min)
   if (Math.abs(now - noonTime) <= windowMs) return 'Noon';
   
-  // Midnight window (±15 min)
+  // Midnight window (±15 min) - check both today's and yesterday's midnight
   if (Math.abs(now - midnightTime) <= windowMs) return 'Midnight';
+  
+  // Also check if we're at yesterday's midnight (which would be ~24h before today's midnight)
+  const yesterdayMidnight = midnightTime - 24 * 3600000;
+  if (Math.abs(now - yesterdayMidnight) <= windowMs) return 'Midnight';
   
   // Partition between noon and midnight
   if (now > noonTime + windowMs && now < midnightTime - windowMs) {
