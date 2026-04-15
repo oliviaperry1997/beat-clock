@@ -20,7 +20,7 @@
 | 10 | Format Configuration & Registry | ✅ | 10-SUMMARY.md | 100% |
 | 11 | Year & Date Format Renderers | 9/9 | Complete    | 2026-04-14 |
 | 12 | Standard Time Format Renderers | 5/5 | Complete    | 2026-04-14 |
-| 13 | Solar Time Format Renderers | ○ | — | 0% |
+| 13 | Solar Time Format Renderers | 2/5 | In Progress|  |
 | 14 | Format Selector UI & Integration | ○ | — | 0% |
 
 ## Phase Details
