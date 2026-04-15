@@ -1,0 +1,126 @@
+.clock-component {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.18rem 0.36rem;
+  transition: opacity 150ms ease-out, background 150ms ease-out, transform 150ms ease-out, border-color 150ms ease-out;
+}
+
+.clock-component + .clock-component {
+  margin-left: 0;
+}
+
+.clock-component[data-component="solarTime"][data-format-id="longitudinal"] {
+  gap: 0.14em;
+}
+
+.clock-component[data-component="solarTime"][data-format-id="longitudinal"]::before {
+  content: '';
+  width: 0.84em;
+  height: 0.84em;
+  flex: 0 0 auto;
+  background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='1.9' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='8.4'/%3E%3Cpath d='M12 4.6v14.8M4.6 12h14.8'/%3E%3C/svg%3E");
+  opacity: 0.94;
+  transform: translateY(0.03em);
+}
+
+.clock-component:hover,
+.clock-component:focus-visible,
+.clock-component.is-open {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+}
+
+.clock-component::after,
+.clock-component__label {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  opacity: 0;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 150ms ease-out;
+}
+
+.clock-component::after {
+  content: attr(data-hover-label);
+}
+
+.clock-component:hover::after,
+.clock-component:focus-visible::after,
+.clock-component.is-open::after {
+  opacity: 1;
+}
+
+.format-selector-dropdown {
+  position: fixed;
+  background: linear-gradient(180deg, rgba(28, 32, 42, 0.82), rgba(12, 14, 22, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px) saturate(140%);
+  padding: 0.5rem;
+  z-index: 1200;
+}
+
+.format-selector-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 36px;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.95);
+  font: inherit;
+  cursor: pointer;
+}
+
+.format-selector-option:hover,
+.format-selector-option:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.16);
+  outline: none;
+}
+
+.format-selector-option.is-active {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.format-selector-option__checkmark {
+  margin-left: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .clock-component::after,
+  .clock-component__label {
+    font-size: 0.65rem;
+  }
+
+  .format-selector-dropdown {
+    padding: 0.4rem;
+  }
+}
+
+@media (hover: none) {
+  .clock-component:hover::after {
+    opacity: 0;
+  }
+
+  .clock-component:focus-visible::after,
+  .clock-component.is-open::after {
+    opacity: 1;
+  }
+}

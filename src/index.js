@@ -1,5 +1,6 @@
 import "./styles.css";
 import { compose } from "./chronometers/index.js";
+import { getChineseNewYear } from "./chronometers/chineseNewYear.js";
 import { initLocationSystem } from "./location/ui.js";
 import { initConverterPanel } from "./converters/ui.js";
 import { getSkyGradientColors } from "./sky.js";
@@ -9,7 +10,7 @@ import { invalidateCache } from "./alarms/astro-cache.js";
 import { getFormat } from "./formats/config.js";
 import { getRenderer } from "./formats/registry.js";
 import { tickRateForFormat } from "./formats/tick-rate.js";
-import { initStdTimePicker, STDTIME_FORMAT_CHANGE_EVENT } from "./formats/ui/stdtime-picker.js";
+import { FORMAT_CHANGE_EVENT, initFormatSelectors, renderFormatDisplay } from "./formats/selectors/ui.js";
 import "./converters/styles.css";
 
 function updateMoonIndicator(lunisolar) {
@@ -48,14 +49,93 @@ function getActiveStdTimeFormat() {
   return getRenderer('stdTime', formatId) ? formatId : '24h';
 }
 
-function getStdTimeString(now) {
-  const formatId = getActiveStdTimeFormat();
-  const renderStdTime = getRenderer('stdTime', formatId) ?? getRenderer('stdTime', '24h');
-  const options = formatId === '24h'
-    ? { showSeconds: true, meridianOffset: 0 }
-    : { meridianOffset: 0 };
+function getSafeFormat(componentId, fallbackFormatId) {
+  const savedFormatId = getFormat(componentId);
+  return getRenderer(componentId, savedFormatId) ? savedFormatId : fallbackFormatId;
+}
 
-  return renderStdTime({ now }, options);
+function getEffectiveYear(now, dateFormatId) {
+  if (dateFormatId !== 'chinese') {
+    return now.getUTCFullYear();
+  }
+
+  const gregorianYear = now.getUTCFullYear();
+  const chineseNewYear = getChineseNewYear(gregorianYear);
+  const chineseNewYearDate = new Date(Date.UTC(
+    chineseNewYear.getYear(),
+    chineseNewYear.getMonth() - 1,
+    chineseNewYear.getDay(),
+  ));
+
+  return now < chineseNewYearDate ? gregorianYear - 1 : gregorianYear;
+}
+
+function getStdTimeOptions(formatId) {
+  if (formatId === '24h') {
+    return { showSeconds: true, meridianOffset: 0 };
+  }
+
+  return { meridianOffset: 0 };
+}
+
+function getRenderFallback(componentId, formatId) {
+  if (componentId === 'stdTime') {
+    return '??:??';
+  }
+
+  if (componentId === 'solarTime') {
+    switch (formatId) {
+      case '24h':
+        return '??:??';
+      case 'decimal':
+        return '@???';
+      case 'longitudinal':
+        return '???\u00B0';
+      case 'descriptive':
+      default:
+        return 'Day';
+    }
+  }
+
+  return '??';
+}
+
+function renderComponent(componentId, formatId, data, opts) {
+  const renderer = getRenderer(componentId, formatId);
+  if (!renderer) {
+    return getRenderFallback(componentId, formatId);
+  }
+
+  try {
+    return renderer(data, opts);
+  } catch (error) {
+    console.warn(`Failed to render ${componentId}:`, error.message);
+    return getRenderFallback(componentId, formatId);
+  }
+}
+
+function renderClockComponents(data, userLocation) {
+  const dateFormatId = getSafeFormat('date', 'gregorian');
+  const effectiveYear = getEffectiveYear(data.now, dateFormatId);
+  const renderData = { ...data, effectiveYear };
+
+  const yearFormatId = getSafeFormat('year', 'holocene');
+  const solarFormatId = getSafeFormat('solarTime', 'descriptive');
+  const stdTimeFormatId = getSafeFormat('stdTime', '24h');
+
+  const year = renderComponent('year', yearFormatId, renderData, {});
+  const solarOpts = {
+    meridianOffset: 0,
+    latitude: userLocation?.latitude,
+    longitude: userLocation?.longitude,
+  };
+  const solarTime = renderComponent('solarTime', solarFormatId, renderData, solarOpts);
+  const date = renderComponent('date', dateFormatId, renderData, {
+    solarDateDiffsStdDate: solarOpts.solarDateDiffsStdDate ?? null,
+  });
+  const stdTime = renderComponent('stdTime', stdTimeFormatId, renderData, getStdTimeOptions(stdTimeFormatId));
+
+  return { year, date, stdTime, solarTime };
 }
 
 function getActiveTickRate() {
@@ -69,15 +149,9 @@ function updateClock(userLocation) {
     longitude: userLocation?.longitude,
   });
 
-  const { holocene, beats, solar, lunisolar } = result;
-
-  // Format lunisolar: leap months display as MX (e.g., M6X for leap 6th month)
-  const { month, day, isLeap } = lunisolar;
-  const monthStr = isLeap ? `${month}X` : `${month}`;
-  const stdTime = getStdTimeString(now);
-
-  const clockText = `H${holocene} M${monthStr} D${day} ${stdTime} ${solar}`;
-  document.querySelector("#beats-container").textContent = clockText;
+  const { lunisolar } = result;
+  const clockValues = renderClockComponents({ now, ...result }, userLocation);
+  renderFormatDisplay(clockValues);
 
   // Update sky background
   const sky = getSkyGradientColors(now, userLocation?.latitude, userLocation?.longitude);
@@ -126,21 +200,21 @@ function handleLocationReady(location) {
   initAlarmSystem(location, (alarmId) => alarmEngine.dismissAlarm(alarmId));
 }
 
-function handleStdTimeFormatChange() {
+function handleFormatChange() {
   updateClock(currentLocation);
   restartDisplayLoop();
   restartAlarmLoop();
 }
 
 // Immediate render on page load (D-09)
+initFormatSelectors(document.querySelector('#beats-container'));
 updateClock(null);
-initStdTimePicker();
 
 initLocationSystem((location) => {
   handleLocationReady(location);
 });
 
-document.addEventListener(STDTIME_FORMAT_CHANGE_EVENT, handleStdTimeFormatChange);
+document.addEventListener(FORMAT_CHANGE_EVENT, handleFormatChange);
 
 // Handle missed alarms when tab becomes visible again
 document.addEventListener('visibilitychange', () => {

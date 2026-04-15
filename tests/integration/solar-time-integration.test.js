@@ -61,9 +61,9 @@ describe('Solar time integration', () => {
       
       const result = renderLongitudinal(data);
       
-      // Should contain Earth symbol and degree symbol
+      // UI prepends the custom symbol, so renderer output is numeric only
       expect(result).toContain('°');
-      expect(result).toMatch(/\d{3}°/); // NNN° pattern
+      expect(result).toMatch(/^\d{3}°$/); // NNN° pattern
       expect(result).not.toContain('???'); // not error fallback
     });
 

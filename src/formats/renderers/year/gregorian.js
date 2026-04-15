@@ -10,12 +10,12 @@
  *
  * @param {object} data - Chronometer data from compose(), with optional effectiveYear and now
  * @param {object} [opts] - Pipeline options (not used by this renderer)
- * @returns {string} Formatted year string: plain integer string e.g. '2026'
+ * @returns {string} Formatted year string with era suffix, e.g. '2026AD'
  */
 export function render(data, opts = {}) {
   if (data?.effectiveYear != null) {
-    return String(data.effectiveYear);
+    return `${data.effectiveYear}AD`;
   }
   const now = data?.now ?? new Date();
-  return String(now.getUTCFullYear());
+  return `${now.getUTCFullYear()}AD`;
 }

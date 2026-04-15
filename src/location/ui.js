@@ -241,7 +241,7 @@ function createLocationManager() {
     <div class="modal-content">
       <div class="modal-header">
         <h2>Add Location</h2>
-        <button id="close-manager" aria-label="Close">×</button>
+        <button id="close-manager" class="modal-close" aria-label="Close">×</button>
       </div>
       
       <!-- Search panel -->

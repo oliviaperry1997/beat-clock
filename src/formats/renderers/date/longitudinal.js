@@ -6,9 +6,9 @@
  *   data.solarLongitude — string 'SL{3-digit-degrees}' or 'SL??' (from solarLongitude chronometer)
  *   data.lunarPhase     — string 'LP{3-digit-degrees}' or 'LP??' (from lunarPhase chronometer)
  *
- * Format:  '☉ {SL}° ☽ {LP}°'
- * Example: '☉ 024° ☽ 180°'
- * Error:   '☉ ???° ☽ ???°'
+ * Format:  '☉{SL}° ☽{LP}°'
+ * Example: '☉024° ☽180°'
+ * Error:   '☉???° ☽???°'
  *
  * Symbols:
  *   ☉ = U+2609 SUN (solar longitude)
@@ -37,5 +37,5 @@ export function render(data, opts = {}) {
   const lpStripped = lp.slice(2);
   const lpValue = /^\d{3}$/.test(lpStripped) ? lpStripped : '???';
 
-  return `\u2609 ${slValue}\u00B0 \u263D ${lpValue}\u00B0`;
+  return `\u2609${slValue}\u00B0 \u263D${lpValue}\u00B0`;
 }

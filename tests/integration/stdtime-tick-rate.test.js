@@ -2,12 +2,21 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-const composeMock = vi.fn(() => ({
-  holocene: 12026,
-  beats: '@500.00',
-  solar: '☉ 180.00°',
-  lunisolar: { month: 4, day: 14, isLeap: false, moonAge: 8 },
-}));
+function createComposeResult() {
+  return {
+    holocene: 11726,
+    beats: '@500.00',
+    solar: 'S12',
+    lunisolar: { month: 4, day: 14, isLeap: false, moonAge: 8 },
+    solarLongitude: 'SL180',
+    lunarPhase: 'LP090',
+    solarTime: { hours: 12, minutes: 30, totalMinutes: 750, degrees: 187.5 },
+    meghalayan: { stage: 'meghalayan', year: 4226, label: 'Meghalayan' },
+    customEpoch: 'CE7',
+  };
+}
+
+const composeMock = vi.fn(() => createComposeResult());
 
 const initLocationSystemMock = vi.fn();
 const initAlarmEngineMock = vi.fn(() => ({
@@ -55,8 +64,18 @@ describe('stdTime live wiring', () => {
   const store = {};
 
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(Date.UTC(2026, 3, 15, 12, 30, 45)));
     vi.resetModules();
     vi.clearAllMocks();
+    composeMock.mockReset();
+    composeMock.mockImplementation(() => createComposeResult());
+    initLocationSystemMock.mockReset();
+    initAlarmEngineMock.mockReset();
+    initAlarmEngineMock.mockImplementation(() => ({
+      stop: vi.fn(),
+      dismissAlarm: vi.fn(),
+    }));
 
     for (const key of Object.keys(store)) {
       delete store[key];
@@ -64,7 +83,6 @@ describe('stdTime live wiring', () => {
 
     document.body.innerHTML = [
       '<div id="location-selector"></div>',
-      '<div id="stdtime-picker-root"></div>',
       '<div id="beats-container"></div>',
       '<div id="converter-panel"></div>',
       '<svg id="moon-indicator"><path id="moon-lit"></path></svg>',
@@ -108,7 +126,7 @@ describe('stdTime live wiring', () => {
     expect(document.getElementById('beats-container').textContent).toContain('⧖');
   });
 
-  it('restarts the display and alarm loops when the stdTime picker changes format', async () => {
+  it('restarts the display and alarm loops when the stdTime selector changes format', async () => {
     initLocationSystemMock.mockImplementation((callback) => {
       callback({ latitude: 51.5, longitude: -0.1 });
     });
@@ -118,20 +136,26 @@ describe('stdTime live wiring', () => {
 
     await import('../../src/index.js');
 
-    const select = document.getElementById('stdtime-picker');
-    expect(select.value).toBe('24h');
+    const stdTimeSegment = document.querySelector('[data-component="stdTime"]');
+    expect(stdTimeSegment).not.toBeNull();
     expect(setIntervalSpy).toHaveBeenLastCalledWith(expect.any(Function), 1000);
     expect(initAlarmEngineMock).toHaveBeenLastCalledWith({ latitude: 51.5, longitude: -0.1 }, 1000);
 
-    select.value = 'decimal';
-    select.dispatchEvent(new Event('change', { bubbles: true }));
+    stdTimeSegment.click();
+    expect(document.querySelectorAll('.format-selector-dropdown')).toHaveLength(1);
+    const decimalOption = Array.from(document.querySelectorAll('.format-selector-option'))
+      .find((button) => button.textContent.includes('Decimal'));
+    decimalOption.click();
     expect(clearIntervalSpy).toHaveBeenCalled();
     expect(setIntervalSpy).toHaveBeenLastCalledWith(expect.any(Function), 864);
     expect(initAlarmEngineMock).toHaveBeenLastCalledWith({ latitude: 51.5, longitude: -0.1 }, 864);
     expect(document.getElementById('beats-container').textContent).toContain('@');
 
-    select.value = 'longitudinal';
-    select.dispatchEvent(new Event('change', { bubbles: true }));
+    stdTimeSegment.click();
+    expect(document.querySelectorAll('.format-selector-dropdown')).toHaveLength(1);
+    const longitudinalOption = Array.from(document.querySelectorAll('.format-selector-option'))
+      .find((button) => button.textContent.includes('Longitudinal'));
+    longitudinalOption.click();
     expect(setIntervalSpy).toHaveBeenLastCalledWith(expect.any(Function), 800);
     expect(initAlarmEngineMock).toHaveBeenLastCalledWith({ latitude: 51.5, longitude: -0.1 }, 800);
     expect(document.getElementById('beats-container').textContent).toContain('⧖');

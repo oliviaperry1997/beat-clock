@@ -11,16 +11,15 @@ import { computeDateDiff } from './date-diff-helper.js';
  * 
  * Formula: degrees = Math.floor((solarMinutesAtChosenLongitude / 1440) * 360)
  * 
- * Symbol: 🜨 (U+1F728, alchemical Earth) — maintains astrological symbol consistency
- * with ☉ (solar longitude) and ☽ (lunar phase) from Phase 11 date renderers.
+ * Symbol: supplied by the display layer so it can use a custom inline SVG.
  * 
- * Format: 🜨 NNN° — integer degrees only, zero-padded to 3 digits (e.g., '🜨 218°', '🜨 042°')
+ * Format: NNN° — integer degrees only, zero-padded to 3 digits (e.g., '218°', '042°')
  * 
  * Source data: data.solarTime.degrees (from solarTime chronometer)
  * 
  * Date comparison: Computes opts.solarDateDiffsStdDate before returning (consumed by date renderers)
  * 
- * Error fallback: '🜨 ???°' when data.solarTime is null or invalid.
+ * Error fallback: '???°' when data.solarTime is null or invalid.
  * 
  * @param {object} data - Chronometer data from compose()
  * @param {object} data.solarTime - { hours, minutes, totalMinutes, degrees } or null
@@ -33,26 +32,26 @@ import { computeDateDiff } from './date-diff-helper.js';
 export function render(data, opts = {}) {
   // Error fallback: null or missing solarTime
   if (!data?.solarTime || typeof data.solarTime !== 'object') {
-    return '\u{1F728} ???\u00B0'; // 🜨 ???° (Unicode escapes for safety)
+    return '???\u00B0';
   }
   
   try {
     const { degrees } = data.solarTime;
     
     // Validate field
-    if (degrees == null) return '\u{1F728} ???\u00B0';
+    if (degrees == null) return '???\u00B0';
     
     // Integer degrees only (no decimal places)
     const intDegrees = Math.floor(degrees);
     
-    // Format: 🜨 NNN° with zero-padding to 3 digits
+    // Format: NNN° with zero-padding to 3 digits. The UI prepends the symbol.
     const formatted = String(intDegrees).padStart(3, '0');
     
     // Compute and set date comparison flag (consumed by date renderers in Phase 14)
     opts.solarDateDiffsStdDate = computeDateDiff(data, opts);
     
-    return `\u{1F728} ${formatted}\u00B0`;
+    return `${formatted}\u00B0`;
   } catch (_) {
-    return '\u{1F728} ???\u00B0';
+    return '???\u00B0';
   }
 }

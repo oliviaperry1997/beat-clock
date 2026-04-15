@@ -13,8 +13,8 @@ describe('year boundary transitions (DATE-04)', () => {
       expect(renderHolocene(data)).toBe('H11725');
     });
 
-    it('gregorian shows 2025', () => {
-      expect(renderGregorian(data)).toBe('2025');
+    it('gregorian shows 2025AD', () => {
+      expect(renderGregorian(data)).toBe('2025AD');
     });
 
     it('meghalayan shows Mgh4225 (2025 + 2200)', () => {
@@ -29,8 +29,8 @@ describe('year boundary transitions (DATE-04)', () => {
       expect(renderHolocene(data)).toBe('H11726');
     });
 
-    it('gregorian shows 2026', () => {
-      expect(renderGregorian(data)).toBe('2026');
+    it('gregorian shows 2026AD', () => {
+      expect(renderGregorian(data)).toBe('2026AD');
     });
 
     it('meghalayan shows Mgh4226 (2026 + 2200)', () => {
@@ -46,7 +46,7 @@ describe('year boundary transitions (DATE-04)', () => {
 
     it('gregorian uses effectiveYear even when data.now is present', () => {
       const data = { now: new Date(Date.UTC(2026, 3, 14)), effectiveYear: 2025 };
-      expect(renderGregorian(data)).toBe('2025');
+      expect(renderGregorian(data)).toBe('2025AD');
     });
   });
 

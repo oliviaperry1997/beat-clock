@@ -124,7 +124,7 @@ function createAlarmManager(location) {
     <div class="modal-content">
       <div class="modal-header">
         <h2>Alarms</h2>
-        <button id="close-alarm-manager" aria-label="Close">×</button>
+        <button id="close-alarm-manager" class="modal-close" aria-label="Close">×</button>
       </div>
       <div id="alarm-tabs" class="alarm-tabs"></div>
       <div id="alarm-panel"></div>
