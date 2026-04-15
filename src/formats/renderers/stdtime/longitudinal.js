@@ -15,11 +15,11 @@
  *   degrees    = adjustedMs / 86400000 * 360
  *
  * Symbol: ⧖ (U+29D6 WHITE HOURGLASS) — NOT ☉ (U+2609 SUN), which is reserved for solar/date renderers.
- * Format: ⧖ NNN.NN° — e.g. '⧖ 0.00°', '⧖ 180.00°', '⧖ 270.25°'
+ * Format: ⧖NNN.NN° — e.g. '⧖0.00°', '⧖180.00°', '⧖270.25°'
  *
  * Precision: floored to 2 decimal places. Range: [0.00°, 360.00°) — never reaches 360.00° exactly.
  *
- * Error fallback: '⧖ ???°' when data is null/undefined.
+ * Error fallback: '⧖???°' when data is null/undefined.
  *
  * @param {object} data - Chronometer data. data.now should be a valid Date.
  * @param {object} [opts] - Pipeline options.
@@ -29,7 +29,7 @@
 export function render(data, opts = {}) {
   // Return error fallback if data itself is null or undefined
   if (data == null) {
-    return '\u29D6 ???\u00B0';
+    return '\u29D6???\u00B0';
   }
 
   const raw = data.now;
@@ -49,8 +49,8 @@ export function render(data, opts = {}) {
 
     const degrees = adjustedMs / 86400000 * 360;
     const flooredDegrees = Math.floor(degrees * 100) / 100;
-    return `\u29D6 ${flooredDegrees.toFixed(2)}\u00B0`;
+    return `\u29D6${flooredDegrees.toFixed(2)}\u00B0`;
   } catch (_) {
-    return '\u29D6 ???\u00B0';
+    return '\u29D6???\u00B0';
   }
 }
