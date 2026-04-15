@@ -105,7 +105,7 @@ describe('stdTime live wiring', () => {
 
     expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 800);
     expect(initAlarmEngineMock).toHaveBeenCalledWith({ latitude: 40.7, longitude: -74.0 }, 800);
-    expect(document.getElementById('beats-container').textContent).toContain('⏲');
+    expect(document.getElementById('beats-container').textContent).toContain('⧖');
   });
 
   it('restarts the display and alarm loops when the stdTime picker changes format', async () => {
@@ -134,6 +134,6 @@ describe('stdTime live wiring', () => {
     select.dispatchEvent(new Event('change', { bubbles: true }));
     expect(setIntervalSpy).toHaveBeenLastCalledWith(expect.any(Function), 800);
     expect(initAlarmEngineMock).toHaveBeenLastCalledWith({ latitude: 51.5, longitude: -0.1 }, 800);
-    expect(document.getElementById('beats-container').textContent).toContain('⏲');
+    expect(document.getElementById('beats-container').textContent).toContain('⧖');
   });
 });
