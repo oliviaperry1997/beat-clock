@@ -63,7 +63,7 @@ describe('Solar time integration', () => {
       
       // UI prepends the custom symbol, so renderer output is numeric only
       expect(result).toContain('°');
-      expect(result).toMatch(/^\d{3}°$/); // NNN° pattern
+      expect(result).toMatch(/^\d{3}°/); // NNN° prefix pattern
       expect(result).not.toContain('???'); // not error fallback
     });
 

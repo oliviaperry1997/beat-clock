@@ -1,4 +1,5 @@
 import { eqtime, base, julian } from 'astronomia';
+import SunCalc from 'suncalc';
 
 /**
  * Solar Time chronometer — computes local solar time with equation of time correction.
@@ -7,7 +8,7 @@ import { eqtime, base, julian } from 'astronomia';
  * @param {object} [opts] - Optional configuration
  * @param {number} [opts.latitude] - Latitude
  * @param {number} [opts.longitude] - Longitude
- * @returns {object|null} Object with { hours, minutes, totalMinutes, degrees } or null when location unavailable
+ * @returns {object|null} Object with { hours, minutes, totalMinutes, degrees, altitudeDeg } or null when location unavailable
  */
 export function compute(date, opts = {}) {
   const { latitude, longitude } = opts;
@@ -36,5 +37,9 @@ export function compute(date, opts = {}) {
   const minutes = totalMinutes % 60;
   const degrees = (totalMinutes / 1440) * 360;
 
-  return { hours, minutes, totalMinutes, degrees };
+  // Solar altitude at the given location in degrees (-90 to +90)
+  const sunPos = SunCalc.getPosition(date, latitude, longitude);
+  const altitudeDeg = sunPos.altitude * (180 / Math.PI);
+
+  return { hours, minutes, totalMinutes, degrees, altitudeDeg };
 }

@@ -291,8 +291,16 @@ export function renderFormatDisplay(values) {
   for (const componentId of COMPONENT_ORDER) {
     const component = getComponentElement(componentId);
     if (!component) continue;
-    component.dataset.formatId = getActiveFormat(componentId) ?? '';
-    component.textContent = values?.[componentId] ?? '';
+    const formatId = getActiveFormat(componentId) ?? '';
+    component.dataset.formatId = formatId;
+    const value = values?.[componentId] ?? '';
+    // Use innerHTML for the longitudinal solar time format, which returns HTML
+    // (degrees + altitude span with SVG icon).
+    if (componentId === 'solarTime' && formatId === 'longitudinal') {
+      component.innerHTML = value;
+    } else {
+      component.textContent = value;
+    }
   }
 
   scheduleLayoutSync();

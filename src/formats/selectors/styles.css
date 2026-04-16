@@ -24,9 +24,32 @@
   width: 0.84em;
   height: 0.84em;
   flex: 0 0 auto;
-  background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='1.9' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='8.4'/%3E%3Cpath d='M12 4.6v14.8M4.6 12h14.8'/%3E%3C/svg%3E");
+  background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='1.9' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='8.4'/%3E%3Cpath d='M12 4.6v14.8M4.6 12h14.8'/%3E%3C%2Fsvg%3E");
   opacity: 0.94;
   transform: translateY(0.03em);
+}
+
+.clock-component[data-component="solarTime"][data-format-id="longitudinal"] .solar-altitude {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  margin-left: 0.28em;
+}
+
+.clock-component[data-component="solarTime"][data-format-id="longitudinal"] .solar-altitude::before {
+  content: '';
+  display: inline-block;
+  width: 0.84em;
+  height: 0.84em;
+  flex: 0 0 auto;
+  /* Sun on horizon with up arrow and diagonal rays.
+     ViewBox 24x24. Horizon at y=20. Sun semicircle: center (12,20) r=5 (top at y=15).
+     Arrow stems from top of sun (12,15) to arrowhead tip (12,3) — spans y≈3–20 like earth symbol.
+     Diagonal rays from sun edge at ~45°: upper-left (8.5,16.5)→(6,14), upper-right (15.5,16.5)→(18,14). */
+  background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 20h22'/%3E%3Cpath d='M7 20A5 5 0 0 1 17 20'/%3E%3Cpath d='M12 15V4'/%3E%3Cpath d='M9.5 6.5L12 4l2.5 2.5'/%3E%3Cpath d='M8.5 16.5L6 14'/%3E%3Cpath d='M15.5 16.5L18 14'/%3E%3C%2Fsvg%3E");
+  opacity: 0.94;
+  transform: translateY(0.03em);
+  margin-right: 0;
 }
 
 .clock-component:hover,
