@@ -10,7 +10,7 @@ function createComposeResult(overrides = {}) {
     lunisolar: { month: 4, day: 14, isLeap: false, moonAge: 8 },
     solarLongitude: 'SL180',
     lunarPhase: 'LP090',
-    solarTime: { hours: 12, minutes: 30, totalMinutes: 750, degrees: 187.5 },
+    solarTime: { hours: 12, minutes: 30, totalMinutes: 750, degrees: 187.5, azimuthDeg: 187.5, altitudeDeg: 42 },
     meghalayan: { stage: 'meghalayan', year: 4226, label: 'Meghalayan' },
     customEpoch: 'CE7',
     ...overrides,
@@ -136,7 +136,7 @@ describe('format selector UI integration', () => {
     await import('../../src/index.js');
 
     expect(document.querySelector('[data-component="solarTime"]').dataset.formatId).toBe('longitudinal');
-    expect(document.querySelector('[data-component="solarTime"]').textContent).toBe('187°');
+    expect(document.querySelector('[data-component="solarTime"]').innerHTML).toMatch(/^187°/);
   });
 
   it('does not render the legacy stdtime picker', async () => {

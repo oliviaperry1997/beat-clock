@@ -3,29 +3,23 @@ import { computeDateDiff } from './date-diff-helper.js';
 /**
  * Longitudinal solar time renderer.
  * 
- * Expresses solar time at the chosen longitude as degrees (0-359°), followed by
- * the current solar altitude at the selected location in degrees (signed integer).
- * Uses actual sun position (equation of time included) at the chosen longitude.
- * Differs from Standard Time longitudinal (Phase 12) which uses fixed meridian offset.
- * 
+ * Expresses the sun's actual compass azimuth at the selected location (0–359°, north-based),
+ * followed by the sun's current altitude.
+ * Uses SunCalc for both values; azimuth is 0=N, 90=E, 180=S, 270=W.
+ *
  * NO decimal degrees — solar time precision philosophy per Phase 13 D-07.
- * 
- * Formula: degrees = Math.floor((solarMinutesAtChosenLongitude / 1440) * 360)
- * 
- * Symbol: supplied by the display layer so it can use a custom inline SVG.
- * The altitude section uses a second span with its own ::before SVG icon.
- * 
- * Format: NNN°<span>±AA°</span> — integer degrees only, zero-padded to 3 digits (e.g., '218°')
- *         altitude signed integer (e.g., '+23°', '-05°'), no space between symbol and number
- * 
- * Source data: data.solarTime.degrees, data.solarTime.altitudeDeg (from solarTime chronometer)
+ *
+ * Format: NNN°<span>±AA°</span> — azimuth zero-padded to 3 digits (e.g., '218°', '042°'),
+ *         altitude signed integer (e.g., '+23°', '−05°'), no space between symbol and number
+ *
+ * Source data: data.solarTime.azimuthDeg, data.solarTime.altitudeDeg (from solarTime chronometer)
  * 
  * Date comparison: Computes opts.solarDateDiffsStdDate before returning (consumed by date renderers)
  * 
  * Error fallback: '???°' when data.solarTime is null or invalid.
  * 
  * @param {object} data - Chronometer data from compose()
- * @param {object} data.solarTime - { hours, minutes, totalMinutes, degrees, altitudeDeg } or null
+ * @param {object} data.solarTime - { hours, minutes, totalMinutes, degrees, azimuthDeg, altitudeDeg } or null
  * @param {Date} data.now - Current UTC Date (for date comparison)
  * @param {object} [opts] - Pipeline options
  * @param {number} [opts.chosenLongitude] - Longitude in degrees (-180 to +180). Default: user's actual longitude if available, else 0°.
@@ -39,13 +33,13 @@ export function render(data, opts = {}) {
   }
   
   try {
-    const { degrees, altitudeDeg } = data.solarTime;
-    
+    const { azimuthDeg, altitudeDeg } = data.solarTime;
+
     // Validate field
-    if (degrees == null) return '???\u00B0';
-    
-    // Integer degrees only (no decimal places)
-    const intDegrees = Math.floor(degrees);
+    if (azimuthDeg == null) return '???\u00B0';
+
+    // Integer degrees only (no decimal places), 0–359
+    const intDegrees = Math.floor(((azimuthDeg % 360) + 360) % 360);
     
     // Format: NNN° with zero-padding to 3 digits. The UI prepends the symbol.
     const formatted = String(intDegrees).padStart(3, '0');

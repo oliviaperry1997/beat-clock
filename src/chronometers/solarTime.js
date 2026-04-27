@@ -37,9 +37,15 @@ export function compute(date, opts = {}) {
   const minutes = totalMinutes % 60;
   const degrees = (totalMinutes / 1440) * 360;
 
-  // Solar altitude at the given location in degrees (-90 to +90)
+  // Solar position at the given location
   const sunPos = SunCalc.getPosition(date, latitude, longitude);
+
+  // Altitude in degrees (-90 to +90)
   const altitudeDeg = sunPos.altitude * (180 / Math.PI);
 
-  return { hours, minutes, totalMinutes, degrees, altitudeDeg };
+  // Azimuth: SunCalc returns radians measured from south, clockwise.
+  // Convert to north-based compass degrees (0–359°, 0=N, 90=E, 180=S, 270=W).
+  const azimuthDeg = ((sunPos.azimuth * (180 / Math.PI)) + 180) % 360;
+
+  return { hours, minutes, totalMinutes, degrees, altitudeDeg, azimuthDeg };
 }
