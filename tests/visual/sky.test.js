@@ -156,4 +156,64 @@ describe('sky gradient', () => {
       }
     });
   });
+
+  describe('evening twilight progression', () => {
+    // New York in winter — clear evening transition
+    const lat = 40.7128;
+    const lon = -74.0060;
+
+    it('progresses smoothly from golden hour through twilight to deep night', () => {
+      // Sample times through evening: golden hour → civil → nautical → astronomical → night
+      const times = [
+        { time: new Date('2026-12-15T21:00:00Z'), label: 'golden hour' },
+        { time: new Date('2026-12-15T21:30:00Z'), label: 'sunset' },
+        { time: new Date('2026-12-15T22:00:00Z'), label: 'civil twilight' },
+        { time: new Date('2026-12-15T22:40:00Z'), label: 'nautical twilight' },
+        { time: new Date('2026-12-15T23:15:00Z'), label: 'astronomical twilight' },
+        { time: new Date('2026-12-16T00:00:00Z'), label: 'night' },
+      ];
+
+      const colors = times.map(({ time }) => getSkyGradientColors(time, lat, lon));
+      
+      // Extract brightness (R+G+B sum) for each time
+      const brightness = colors.map(c => {
+        const topR = parseInt(c.topColor.slice(1, 3), 16);
+        const topG = parseInt(c.topColor.slice(3, 5), 16);
+        const topB = parseInt(c.topColor.slice(5, 7), 16);
+        return topR + topG + topB;
+      });
+
+      // Brightness should decrease monotonically (no reversals)
+      for (let i = 1; i < brightness.length; i++) {
+        expect(brightness[i]).toBeLessThanOrEqual(brightness[i - 1] + 10); // +10 tolerance for rounding
+      }
+
+      // First time (golden hour) should be significantly brighter than last (night)
+      expect(brightness[0]).toBeGreaterThan(brightness[brightness.length - 1] + 50);
+    });
+
+    it('does not show sudden brightness spikes during twilight', () => {
+      // Check every 10 minutes through the critical evening period
+      const startTime = new Date('2026-12-15T21:00:00Z').getTime();
+      const colors = [];
+      
+      for (let i = 0; i < 18; i++) { // 3 hours = 18 x 10min
+        const time = new Date(startTime + i * 10 * 60 * 1000);
+        colors.push(getSkyGradientColors(time, lat, lon));
+      }
+
+      const brightness = colors.map(c => {
+        const topR = parseInt(c.topColor.slice(1, 3), 16);
+        const topG = parseInt(c.topColor.slice(3, 5), 16);
+        const topB = parseInt(c.topColor.slice(5, 7), 16);
+        return topR + topG + topB;
+      });
+
+      // No brightness should increase by more than 20 points (allowing small fluctuations)
+      for (let i = 1; i < brightness.length; i++) {
+        const increase = brightness[i] - brightness[i - 1];
+        expect(increase).toBeLessThan(20);
+      }
+    });
+  });
 });
